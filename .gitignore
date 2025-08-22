@@ -47,3 +47,4 @@ Thumbs.db
 /.cache
 .parcel-cache
 .env
+/secrets
