@@ -33,13 +33,13 @@ export class User {
   })
   identityStatus: IdentityStatus;
 
-  @Column({ nullable: false })
+  @Column({ nullable: false, length: 50 })
   firstName: string;
 
-  @Column({ nullable: false })
+  @Column({ nullable: false, length: 50 })
   lastName: string;
 
-  @Column({ nullable: false })
+  @Column({ nullable: false, length: 50 })
   country: string;
 
   @Column({ nullable: false })
