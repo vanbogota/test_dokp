@@ -23,8 +23,12 @@ export class User {
   @Column({ unique: true })
   email: string;
 
-  @Column({ default: UserRoles.USER })
-  role: string;
+  @Column({
+    type: 'enum',
+    enum: UserRoles,
+    default: UserRoles.USER,
+  })
+  role: UserRoles;
 
   @Column({
     type: 'enum',
