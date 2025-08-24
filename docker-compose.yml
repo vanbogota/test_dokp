@@ -2,7 +2,7 @@ services:
   api:
     build: .
     image: docport-api
-    container_name: users_api
+    container_name: docport_api
     restart: unless-stopped
     ports:
       - "3000:3000"
@@ -19,7 +19,7 @@ services:
 
   postgres:
     image: postgis/postgis:16-3.4
-    container_name: docport_db_postgres
+    container_name: docport_db
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${PG_USER}

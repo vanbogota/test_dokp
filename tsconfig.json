@@ -1,9 +1,9 @@
 {
    "compilerOptions": {
       "lib": [
-         "es2021"
+         "es2022"
       ],
-      "target": "es2021",
+      "target": "es2022",
       "module": "commonjs",
       "moduleResolution": "node",
       "outDir": "./dist",
@@ -11,6 +11,11 @@
       "experimentalDecorators": true,
       "sourceMap": true,
       "skipLibCheck": true,
+      "esModuleInterop": true,
+      "preserveConstEnums": true,
       "strict": true
-   }
+   },
+   "watchOptions": {
+    "watchFile": "fixedPollingInterval"
+  }
 }
