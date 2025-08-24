@@ -15,37 +15,37 @@ export enum UserRoles {
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column({ unique: true })
-  auth0Sub: string;
+  auth0Sub!: string;
 
   @Column({ unique: true })
-  email: string;
+  email!: string;
 
   @Column({
     type: 'enum',
     enum: UserRoles,
     default: UserRoles.USER,
   })
-  role: UserRoles;
+  role!: UserRoles;
 
   @Column({
     type: 'enum',
     enum: IdentityStatus,
     default: IdentityStatus.PENDING,
   })
-  identityStatus: IdentityStatus;
+  identityStatus!: IdentityStatus;
 
   @Column({ nullable: false, length: 50 })
-  firstName: string;
+  firstName!: string;
 
   @Column({ nullable: false, length: 50 })
-  lastName: string;
+  lastName!: string;
 
   @Column({ nullable: false, length: 50 })
-  country: string;
+  country!: string;
 
   @Column({ nullable: false })
-  birthYear: number;
+  birthYear!: number;
 }

@@ -1,18 +1,83 @@
-import { Controller, Get, Post, Body } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Delete,
+  Put,
+  NotFoundException,
+} from '@nestjs/common';
+import {
+  ApiBadRequestResponse,
+  ApiCreatedResponse,
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { UsersService } from './users.service';
-import { User } from './user.entity';
+import { User, UserRoles } from './user.entity';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { UserResponseDto } from './dto/UserResponseDto';
+import { CreateUserDto } from './dto/CreateUserDto';
+import { UpdateUserDto } from './dto/UpdateUserDto';
 
+@ApiTags('users')
 @Controller('users')
 export class UsersController {
   constructor(private usersService: UsersService) {}
 
   @Get()
-  getAll(): Promise<User[]> {
-    return this.usersService.findAll();
+  @Roles(UserRoles.ADMIN)
+  @ApiOperation({ summary: 'Get all users' })
+  @ApiOkResponse({
+    description: 'List of users',
+    type: [UserResponseDto],
+  })
+  async getAll(): Promise<UserResponseDto[]> {
+    return await this.usersService.findAll();
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Get a user by ID' })
+  @ApiOkResponse({ type: UserResponseDto })
+  @ApiNotFoundResponse({ description: 'User not found' })
+  async getById(@Param('id') id: string): Promise<UserResponseDto> {
+    const user = await this.usersService.findById(id);
+    if (!user) {
+      throw new NotFoundException('User not found.');
+    }
+    return user;
   }
 
   @Post()
-  create(@Body() user: Partial<User>): Promise<User> {
-    return this.usersService.create(user);
+  @ApiOperation({ summary: 'Create a new user' })
+  @ApiCreatedResponse({ type: String })
+  @ApiBadRequestResponse({ description: 'Validation failed' })
+  async create(@Body() user: CreateUserDto): Promise<string> {
+    const { id } = await this.usersService.create(user);
+    return id;
+  }
+
+  @Put(':id')
+  @ApiOperation({ summary: 'Update a user by ID' })
+  @ApiOkResponse({ description: 'User updated', type: User })
+  @ApiNotFoundResponse({ description: 'User not found' })
+  async update(
+    @Param('id') id: string,
+    @Body() user: UpdateUserDto,
+  ): Promise<UserResponseDto> {
+    return await this.usersService.update(id, user);
+  }
+
+  @Delete(':id')
+  @Roles(UserRoles.ADMIN)
+  @ApiOperation({ summary: 'Delete a user by ID' })
+  @ApiOkResponse({ description: 'User deleted' })
+  @ApiNotFoundResponse({ description: 'User not found' })
+  async delete(@Param('id') id: string): Promise<void> {
+    return await this.usersService.delete(id);
   }
 }

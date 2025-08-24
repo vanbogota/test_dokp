@@ -1,6 +1,7 @@
 services:
   api:
     build: .
+    image: docport-api
     container_name: users_api
     restart: unless-stopped
     ports:
@@ -13,12 +14,12 @@ services:
       - .:/usr/src/app
       - /usr/src/app/node_modules
     networks:
-      - app-network
+      - docport_app_network
     command: npm run start:dev
 
   postgres:
     image: postgis/postgis:16-3.4
-    container_name: db_postgres
+    container_name: docport_db_postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
@@ -29,12 +30,12 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - app-network
+      - docport_app_network
 
 volumes:
   postgres_data:
     driver: local
 
 networks:
-  app-network:
+  docport_app_network:
     driver: bridge
