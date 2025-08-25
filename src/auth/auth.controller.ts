@@ -1,4 +1,79 @@
-import { Controller } from '@nestjs/common';
+import { Controller, Get, Post, Req, Res } from '@nestjs/common';
+import { AuthService } from './auth.service';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { Response } from 'express';
+import { ConfigService } from '@nestjs/config';
+import { TokenResponse } from '../common/interfaces/auth.interfaces';
+import { Public } from '../common/decorators/public.decorator';
 
+@Public()
+@ApiTags('auth')
 @Controller('auth')
-export class AuthController {}
+export class AuthController {
+  constructor(
+    private readonly authService: AuthService,
+    private readonly configService: ConfigService,
+  ) {}
+
+  @Get('token') //for tests
+  @ApiOperation({ summary: 'Get Auth0 access token' })
+  @ApiResponse({ status: 200, description: 'Returns an Auth0 access token' })
+  async getToken(): Promise<TokenResponse> {
+    return await this.authService.getAccessToken();
+  }
+
+  @Get('login')
+  @ApiOperation({ summary: 'Redirect to Auth0 login page' })
+  @ApiResponse({
+    status: 302,
+    description: 'Redirects to Auth0 authorization URL',
+  })
+  login(@Res() res: Response) {
+    const authUrl = this.authService.getAuthorizationUrl();
+    //return res.json({ authUrl }); //for tests
+    return res.redirect(authUrl);
+  }
+
+  @Get('callback')
+  @ApiOperation({ summary: 'Handle Auth0 callback after login' })
+  @ApiResponse({ status: 200, description: 'Successfully authenticated' })
+  async callback(@Req() req: any, @Res() res: Response) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+    const { code } = req.query;
+
+    if (!code) {
+      //return res.json({ redirect: '/auth/login' }); //for tests
+      return res.redirect('/auth/login');
+    }
+
+    try {
+      const tokens = await this.authService.handleCallback(code);
+      const frontendRedirectUrl = this.configService.get<string>('FRONTEND_URL');
+
+      res.cookie('access_token', tokens.access_token, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'lax',
+        maxAge: tokens.expires_in * 1000,
+      });
+
+      return res.redirect(`${frontendRedirectUrl}/auth-success`);
+    } catch (error) {
+      console.error('Auth callback error:', error);
+      return res.redirect('/auth/login');
+    }
+  }
+
+  @Post('logout')
+  @ApiOperation({ summary: 'Get logout URL for Auth0' })
+  @ApiResponse({ status: 200, description: 'Returns Auth0 logout URL' })
+  logout() {
+    const domain = this.configService.get<string>('AUTH0_DOMAIN');
+    const clientId = this.configService.get<string>('AUTH0_CLIENT_ID');
+    const returnTo = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3000';
+
+    const logoutUrl = `https://${domain}/v2/logout?client_id=${clientId}&returnTo=${encodeURIComponent(returnTo)}`;
+
+    return { logoutUrl };
+  }
+}

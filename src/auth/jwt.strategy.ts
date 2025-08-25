@@ -1,92 +1,53 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
+import axios from 'axios';
 import { AuthService } from './auth.service';
-import * as https from 'https';
+import { DecodedToken, JwkKey, JwksResponse } from '../common/interfaces/jwt.interfaces';
+import { UsersService } from '../entities/users/users.service';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor(private authService: AuthService) {
+  constructor(
+    private readonly authService: AuthService,
+    private readonly userService: UsersService,
+  ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       audience: process.env.AUTH0_AUDIENCE,
       issuer: `https://${process.env.AUTH0_DOMAIN}/`,
       algorithms: ['RS256'],
-      secretOrKeyProvider: (request, token, done) => {
+      secretOrKeyProvider: (_request: unknown, token: string, done: (err: Error | null, key?: string) => void) => {
         this.getAuth0PublicKey(token)
           .then((publicKey) => done(null, publicKey))
-          .catch((error) => done(error, undefined));
+          .catch((error) => done(error as Error, undefined));
       },
     });
   }
 
   private async getAuth0PublicKey(token: string): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const options = {
-        hostname: process.env.AUTH0_DOMAIN,
-        path: '/.well-known/jwks.json',
-        method: 'GET',
-      };
-
-      const req = https.request(options, (res) => {
-        let data = '';
-
-        res.on('data', (chunk) => {
-          data += chunk;
-        });
-
-        res.on('end', () => {
-          try {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-            const jwks = JSON.parse(data);
-            const decodedToken = this.decodeToken(token);
-
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-            if (!decodedToken.header.kid) {
-              throw new UnauthorizedException('No kid found in token');
-            }
-
-            interface JwkKey {
-              kid: string;
-              x5c: string[];
-              [key: string]: any;
-            }
-
-            interface JwksResponse {
-              keys: JwkKey[];
-            }
-
-            interface DecodedToken {
-              header: {
-                kid?: string;
-                [key: string]: any;
-              };
-              payload: any;
-            }
-
-            const key: JwkKey | undefined = (jwks as JwksResponse).keys.find(
-              (k: JwkKey) =>
-                k.kid === (decodedToken as DecodedToken).header.kid,
-            );
-
-            if (!key) {
-              throw new UnauthorizedException('No matching key found');
-            }
-
-            const publicKey = this.formatPublicKey(key.x5c[0]);
-            resolve(publicKey);
-          } catch (error) {
-            reject(new UnauthorizedException('Invalid token'));
-          }
-        });
+    const jwksUrl = `https://${process.env.AUTH0_DOMAIN}/.well-known/jwks.json`;
+    let jwks: JwksResponse;
+    try {
+      const response = await axios.get<JwksResponse>(jwksUrl, {
+        timeout: 5000,
       });
+      jwks = response.data;
+    } catch (error) {
+      throw new UnauthorizedException('Unable to fetch JWKS from Auth0');
+    }
 
-      req.on('error', (error) => {
-        reject(error);
-      });
+    const decodedToken = this.decodeToken(token);
+    if (!decodedToken.header || typeof decodedToken.header.kid !== 'string') {
+      throw new UnauthorizedException('No kid found in token');
+    }
 
-      req.end();
-    });
+    const key = jwks.keys.find((k: JwkKey) => k.kid === decodedToken.header.kid);
+    if (!key || !Array.isArray(key.x5c) || !key.x5c[0]) {
+      throw new UnauthorizedException('No matching key found');
+    }
+
+    return this.formatPublicKey(key.x5c[0]);
   }
 
   private decodeToken(token: string): { header: any; payload: any } {
@@ -96,8 +57,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     }
 
     return {
-      header: JSON.parse(Buffer.from(parts[0], 'base64').toString()),
-      payload: JSON.parse(Buffer.from(parts[1], 'base64').toString()),
+      header: JSON.parse(Buffer.from(parts[0], 'base64').toString()) as DecodedToken['header'],
+      payload: JSON.parse(Buffer.from(parts[1], 'base64').toString()) as DecodedToken['payload'],
     };
   }
 
@@ -108,17 +69,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: any): Promise<any> {
-    const user = await this.authService.validateUser(payload.sub);
-    if (!user) {
-      throw new UnauthorizedException();
-      //   const auth0User = {
-      //     sub: payload.sub,
-      //     email: payload.email,
-      //     given_name: payload.given_name,
-      //     family_name: payload.family_name,
-      //   };
-      //   return this.authService.createUserFromAuth0(auth0User);
-    }
+    const user = await this.userService.findByAuth0Sub(payload.sub);
     return user;
   }
 }

@@ -1,20 +1,10 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Param,
-  Delete,
-  Put,
-  NotFoundException,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, Put, ParseUUIDPipe } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiCreatedResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
-  ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import { UsersService } from './users.service';
@@ -44,31 +34,24 @@ export class UsersController {
   @ApiOperation({ summary: 'Get a user by ID' })
   @ApiOkResponse({ type: UserResponseDto })
   @ApiNotFoundResponse({ description: 'User not found' })
-  async getById(@Param('id') id: string): Promise<UserResponseDto> {
-    const user = await this.usersService.findById(id);
-    if (!user) {
-      throw new NotFoundException('User not found.');
-    }
-    return user;
+  async getById(@Param('id', ParseUUIDPipe) id: string): Promise<UserResponseDto> {
+    return await this.usersService.findById(id);
   }
 
+  //for testing
   @Post()
   @ApiOperation({ summary: 'Create a new user' })
   @ApiCreatedResponse({ type: String })
   @ApiBadRequestResponse({ description: 'Validation failed' })
   async create(@Body() user: CreateUserDto): Promise<string> {
-    const { id } = await this.usersService.create(user);
-    return id;
+    return await this.usersService.create(user);
   }
 
   @Put(':id')
   @ApiOperation({ summary: 'Update a user by ID' })
   @ApiOkResponse({ description: 'User updated', type: User })
   @ApiNotFoundResponse({ description: 'User not found' })
-  async update(
-    @Param('id') id: string,
-    @Body() user: UpdateUserDto,
-  ): Promise<UserResponseDto> {
+  async update(@Param('id') id: string, @Body() user: UpdateUserDto): Promise<UserResponseDto> {
     return await this.usersService.update(id, user);
   }
 
