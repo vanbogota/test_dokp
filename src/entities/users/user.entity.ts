@@ -1,16 +1,20 @@
 import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 
-export enum IdentityStatus {
-  PENDING = 'pending',
-  VERIFIED = 'verified',
-  FAILED = 'failed',
-}
+export const IDENTITY_STATUS = {
+  PENDING: 'pending',
+  VERIFIED: 'verified',
+  FAILED: 'failed',
+} as const;
 
-export enum UserRoles {
-  USER = 'user',
-  ADMIN = 'admin',
-  DOCTOR = 'doctor',
-}
+export type IdentityStatus = (typeof IDENTITY_STATUS)[keyof typeof IDENTITY_STATUS];
+
+export const USER_ROLES = {
+  USER: 'user',
+  ADMIN: 'admin',
+  DOCTOR: 'doctor',
+} as const;
+
+export type UserRoles = (typeof USER_ROLES)[keyof typeof USER_ROLES];
 
 @Entity('users')
 export class User {
@@ -24,16 +28,14 @@ export class User {
   email!: string;
 
   @Column({
-    type: 'enum',
-    enum: UserRoles,
-    default: UserRoles.USER,
+    type: 'text',
+    default: USER_ROLES.USER,
   })
   role!: UserRoles;
 
   @Column({
-    type: 'enum',
-    enum: IdentityStatus,
-    default: IdentityStatus.PENDING,
+    type: 'text',
+    default: IDENTITY_STATUS.PENDING,
   })
   identityStatus!: IdentityStatus;
 

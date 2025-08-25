@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IdentityStatus, UserRoles } from '../user.entity';
+import { IdentityStatus, UserRoles, IDENTITY_STATUS, USER_ROLES } from '../user.entity';
 import { Expose } from 'class-transformer';
 import { IsEmail, IsEnum, IsNotEmpty, IsNumber, IsString, IsUUID } from 'class-validator';
 
@@ -15,14 +15,14 @@ export class UserResponseDto {
   @IsNotEmpty()
   email!: string;
 
-  @ApiProperty({ enum: UserRoles, example: UserRoles.USER })
+  @ApiProperty({ enum: Object.values(USER_ROLES), example: USER_ROLES.USER })
   @Expose()
-  @IsEnum(UserRoles)
+  @IsEnum(USER_ROLES)
   role!: UserRoles;
 
-  @ApiProperty({ enum: IdentityStatus, example: IdentityStatus.PENDING })
+  @ApiProperty({ enum: Object.values(IDENTITY_STATUS), example: IDENTITY_STATUS.PENDING })
   @Expose()
-  @IsEnum(IdentityStatus)
+  @IsEnum(IDENTITY_STATUS)
   identityStatus!: IdentityStatus;
 
   @ApiProperty({ example: 'John' })

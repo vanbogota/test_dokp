@@ -15,7 +15,7 @@ async function bootstrap() {
   app.use(
     express.json({
       verify: (req: any, res, buf) => {
-        if (req.url.includes('/webhooks/stripe') || req.url.includes('/identity/webhook')) {
+        if (req.url.includes('/stripe/webhook') || req.url.includes('/identity/webhook')) {
           req.rawBody = buf;
         }
       },
