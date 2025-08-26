@@ -1,21 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 
-// export const IDENTITY_STATUS = {
-//   PENDING: 'pending',
-//   VERIFIED: 'verified',
-//   FAILED: 'failed',
-// } as const;
-
-// export type IdentityStatus = (typeof IDENTITY_STATUS)[keyof typeof IDENTITY_STATUS];
-
-// export const USER_ROLES = {
-//   USER: 'user',
-//   ADMIN: 'admin',
-//   DOCTOR: 'doctor',
-// } as const;
-
-// export type UserRoles = (typeof USER_ROLES)[keyof typeof USER_ROLES];
-
 export enum IdentityStatus {
   PENDING = 'pending',
   VERIFIED = 'verified',
