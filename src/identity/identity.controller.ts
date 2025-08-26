@@ -18,7 +18,10 @@ export class IdentityController {
   @Post('start')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Start identity verification process' })
-  @ApiResponse({ status: 200, description: 'Returns a client secret for Stripe Identity verification' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns a client secret for Stripe Identity verification',
+  })
   async startIdentityVerification(@Req() req: any): Promise<IdentitySessionResponse> {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
     const userId = req.user.id;
@@ -38,7 +41,9 @@ export class IdentityController {
   @Post('webhook')
   @ApiOperation({ summary: 'Webhook endpoint for Stripe identity verification events' })
   @ApiResponse({ status: 200, description: 'Webhook processed successfully' })
-  async handleWebhook(@Body() payload: StripeIdentityWebhookPayload): Promise<{ received: boolean }> {
+  async handleWebhook(
+    @Body() payload: StripeIdentityWebhookPayload,
+  ): Promise<{ received: boolean }> {
     await this.identityService.handleWebhook(payload);
     return { received: true };
   }

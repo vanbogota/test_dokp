@@ -8,10 +8,9 @@ import * as express from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
-    rawBody: true, // Необходимо для обработки Stripe webhooks
+    rawBody: true,
   });
 
-  // Middleware для обработки raw body в запросах
   app.use(
     express.json({
       verify: (req: any, res, buf) => {
