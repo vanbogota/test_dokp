@@ -10,6 +10,7 @@ import {
   IdentityVerificationData,
   VerificationStatus,
 } from '../common/interfaces/identity.interfaces';
+import { UsersService } from '../entities/users/users.service';
 @Injectable()
 export class IdentityService {
   private readonly logger = new Logger(IdentityService.name);
@@ -17,8 +18,7 @@ export class IdentityService {
 
   constructor(
     private readonly configService: ConfigService,
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
+    private readonly userService: UsersService,
   ) {
     const stripeApiKey = this.configService.get<string>('STRIPE_API_KEY');
     if (!stripeApiKey) {
@@ -31,7 +31,7 @@ export class IdentityService {
 
   async startIdentityVerification(userId: string): Promise<IdentitySessionResponse> {
     try {
-      const user = await this.userRepository.findOne({ where: { id: userId } });
+      const user = await this.userService.findById(userId);
       if (!user) {
         throw new NotFoundException(`User with ID ${userId} not found`);
       }
@@ -64,7 +64,7 @@ export class IdentityService {
 
   async getIdentityStatus(userId: string): Promise<IdentityStatusResponse> {
     try {
-      const user = await this.userRepository.findOne({ where: { id: userId } });
+      const user = await this.userService.findById(userId);
       if (!user) {
         throw new NotFoundException(`User with ID ${userId} not found`);
       }
@@ -117,7 +117,7 @@ export class IdentityService {
         return;
       }
 
-      const user = await this.userRepository.findOne({ where: { id: userId } });
+      const user = await this.userService.findById(userId);
       if (!user) {
         this.logger.error(`User with ID ${userId} not found`);
         return;
@@ -167,7 +167,7 @@ export class IdentityService {
         }
       }
 
-      await this.userRepository.save(user);
+      await this.userService.update(userId, user);
       this.logger.log(`Updated identity status for user ${userId} to ${user.identityStatus}`);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';

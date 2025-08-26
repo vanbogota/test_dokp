@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Body, Param, Delete, Put, ParseUUIDPipe } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
+  ApiBearerAuth,
   ApiCreatedResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
@@ -15,6 +16,7 @@ import { CreateUserDto } from './dto/CreateUserDto';
 import { UpdateUserDto } from './dto/UpdateUserDto';
 
 @ApiTags('users')
+@ApiBearerAuth()
 @Controller('users')
 export class UsersController {
   constructor(private usersService: UsersService) {}

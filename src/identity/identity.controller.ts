@@ -1,5 +1,11 @@
 import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiOkResponse,
+  ApiNotFoundResponse,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from '../common/guards/auth.guard';
 import { IdentityService } from './identity.service';
 import {
@@ -9,8 +15,8 @@ import {
 } from '../common/interfaces/identity.interfaces';
 import { Public } from '../common/decorators/public.decorator';
 
-@Public()
 @ApiTags('identity')
+@Public()
 @Controller('identity')
 export class IdentityController {
   constructor(private readonly identityService: IdentityService) {}
@@ -18,10 +24,8 @@ export class IdentityController {
   @Post('start')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Start identity verification process' })
-  @ApiResponse({
-    status: 200,
-    description: 'Returns a client secret for Stripe Identity verification',
-  })
+  @ApiOkResponse({ description: 'Returns a client secret for Stripe Identity verification' })
+  @ApiNotFoundResponse({ description: 'User not found' })
   async startIdentityVerification(@Req() req: any): Promise<IdentitySessionResponse> {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
     const userId = req.user.id;

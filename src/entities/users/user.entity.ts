@@ -1,3 +1,4 @@
+import { Expose } from 'class-transformer';
 import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 
 export enum IdentityStatus {
@@ -14,15 +15,19 @@ export enum UserRoles {
 
 @Entity('users')
 export class User {
+  @Expose()
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
+  @Expose()
   @Column({ unique: true })
   auth0Sub!: string;
 
+  @Expose()
   @Column({ unique: true })
   email!: string;
 
+  @Expose()
   @Column({
     type: 'enum',
     enum: UserRoles,
@@ -30,6 +35,7 @@ export class User {
   })
   role!: UserRoles;
 
+  @Expose()
   @Column({
     type: 'enum',
     enum: IdentityStatus,
@@ -37,15 +43,19 @@ export class User {
   })
   identityStatus!: IdentityStatus;
 
+  @Expose()
   @Column({ nullable: false, length: 50 })
   firstName!: string;
 
+  @Expose()
   @Column({ nullable: false, length: 50 })
   lastName!: string;
 
+  @Expose()
   @Column({ nullable: false, length: 50 })
   country!: string;
 
+  @Expose()
   @Column({ nullable: false })
   birthYear!: number;
 }

@@ -1,9 +1,8 @@
 import { Controller, Get, Post, Req, Res } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiOkResponse } from '@nestjs/swagger';
 import { Response } from 'express';
 import { ConfigService } from '@nestjs/config';
-import { TokenResponse } from '../common/interfaces/auth.interfaces';
 import { Public } from '../common/decorators/public.decorator';
 
 @Public()
@@ -16,9 +15,9 @@ export class AuthController {
   ) {}
 
   @Get('token') //for tests
-  @ApiOperation({ summary: 'Get Auth0 access token' })
-  @ApiResponse({ status: 200, description: 'Returns an Auth0 access token' })
-  async getToken(): Promise<TokenResponse> {
+  @ApiOperation({ summary: 'For testing: Get Auth0 access token' })
+  @ApiOkResponse({ description: 'Returns an Auth0 access token' })
+  async getToken(): Promise<string> {
     return await this.authService.getAccessToken();
   }
 
@@ -30,7 +29,7 @@ export class AuthController {
   })
   login(@Res() res: Response) {
     const authUrl = this.authService.getAuthorizationUrl();
-    //return res.json({ authUrl }); //for tests
+    //return res.json({ authUrl }); //for testing
     return res.redirect(authUrl);
   }
 
@@ -42,12 +41,14 @@ export class AuthController {
     const { code } = req.query;
 
     if (!code) {
-      //return res.json({ redirect: '/auth/login' }); //for tests
+      //return res.json({ redirect: '/auth/login' }); //for testing
       return res.redirect('/auth/login');
     }
 
     try {
       const tokens = await this.authService.handleCallback(code);
+      const userProfile = await this.authService.getUserProfile(tokens.access_token);
+
       const frontendRedirectUrl = this.configService.get<string>('FRONTEND_URL');
 
       res.cookie('access_token', tokens.access_token, {
@@ -57,6 +58,7 @@ export class AuthController {
         maxAge: tokens.expires_in * 1000,
       });
 
+      //return res.json({ redirect: `${frontendRedirectUrl}/auth-success` }); //for testing
       return res.redirect(`${frontendRedirectUrl}/auth-success`);
     } catch (error) {
       console.error('Auth callback error:', error);

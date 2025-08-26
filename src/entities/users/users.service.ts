@@ -41,7 +41,7 @@ export class UsersService {
       });
       const { id } = await this.usersRepository.save(newUser);
       return id;
-    } catch (error: unknown) {
+    } catch (error) {
       const pgError = error as {
         code?: string;
         detail?: string;
@@ -59,15 +59,28 @@ export class UsersService {
     }
   }
 
-  async update(id: string, user: UpdateUserDto): Promise<User> {
+  async update(id: string, user: UpdateUserDto): Promise<UserResponseDto> {
+    const entity = await this.usersRepository.preload({ id, ...user });
+    if (!entity) throw new NotFoundException('User not found.');
+
     try {
-      return await this.usersRepository.save({ ...user, id });
+      const updatedUser = await this.usersRepository.save(entity);
+      return plainToInstance(UserResponseDto, updatedUser, { excludeExtraneousValues: true });
     } catch (error) {
-      if (error instanceof Error) {
-        throw new Error(error.message);
-      } else {
-        throw error;
+      const pgError = error as {
+        code?: string;
+        detail?: string;
+      };
+      if (pgError?.code === '23505') {
+        let field = 'unknown';
+        if (pgError.detail?.includes('auth0Sub')) {
+          field = 'auth0Sub';
+        } else if (pgError.detail?.includes('email')) {
+          field = 'email';
+        }
+        throw new ConflictException(`Unique constraint violated for field: ${field}`);
       }
+      throw new InternalServerErrorException('Failed to update user');
     }
   }
 

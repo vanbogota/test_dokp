@@ -1,10 +1,20 @@
-import { Body, Controller, Headers, Post, RawBodyRequest, Req, UnauthorizedException } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Headers,
+  Post,
+  RawBodyRequest,
+  Req,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { WebhooksService } from './webhooks.service';
 import { Request } from 'express';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { IdentityService } from '../identity/identity.service';
+import { Public } from '../common/decorators/public.decorator';
 
 @ApiTags('stripe')
+@Public()
 @Controller('stripe')
 export class StripeWebhooksController {
   constructor(

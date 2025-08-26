@@ -1,9 +1,10 @@
-import { Controller, Get, Param, Post, Req } from '@nestjs/common';
+import { Body, Controller, Get, ParseUUIDPipe, Post, Req } from '@nestjs/common';
 import { Request } from 'express';
 import { UsersService } from './entities/users/users.service';
-import { ApiNotFoundResponse, ApiOkResponse, ApiOperation } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiNotFoundResponse, ApiOkResponse, ApiOperation } from '@nestjs/swagger';
 import { UserResponseDto } from './entities/users/dto/UserResponseDto';
 
+@ApiBearerAuth()
 @Controller()
 export class AppController {
   constructor(private readonly userService: UsersService) {}
@@ -18,7 +19,7 @@ export class AppController {
   @ApiOperation({ summary: 'Get a user by ID' })
   @ApiOkResponse({ type: UserResponseDto })
   @ApiNotFoundResponse({ description: 'User not found' })
-  getProfile(@Param('id') id: string) {
+  async getProfile(@Body('id', ParseUUIDPipe) id: string): Promise<UserResponseDto> {
     return this.userService.findById(id);
   }
 }

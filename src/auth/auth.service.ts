@@ -19,7 +19,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  async getAccessToken(): Promise<TokenResponse> {
+  async getAccessToken(): Promise<string> {
     const domain = this.configService.get<string>('AUTH0_DOMAIN');
     const clientId = this.configService.get<string>('AUTH0_CLIENT_ID');
     const clientSecret = this.configService.get<string>('AUTH0_CLIENT_SECRET');
@@ -37,7 +37,7 @@ export class AuthService {
         }),
       );
 
-      return data;
+      return data.access_token;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       this.logger.error('Failed to get access token from Auth0: ' + errorMessage);
@@ -48,7 +48,8 @@ export class AuthService {
   getAuthorizationUrl(): string {
     const domain = this.configService.get<string>('AUTH0_DOMAIN');
     const clientId = this.configService.get<string>('AUTH0_CLIENT_ID');
-    const redirectUri = this.configService.get<string>('AUTH0_CALLBACK_URL') || 'http://localhost:3000/auth/callback';
+    const redirectUri =
+      this.configService.get<string>('AUTH0_CALLBACK_URL') || 'http://localhost:3000/auth/callback';
     const audience = this.configService.get<string>('AUTH0_AUDIENCE') || '';
     const scope = 'openid profile email';
 
@@ -66,7 +67,8 @@ export class AuthService {
     const domain = this.configService.get<string>('AUTH0_DOMAIN');
     const clientId = this.configService.get<string>('AUTH0_CLIENT_ID');
     const clientSecret = this.configService.get<string>('AUTH0_CLIENT_SECRET');
-    const redirectUri = this.configService.get<string>('AUTH0_CALLBACK_URL') || 'http://localhost:3000/auth/callback';
+    const redirectUri =
+      this.configService.get<string>('AUTH0_CALLBACK_URL') || 'http://localhost:3000/auth/callback';
     const url = `https://${domain}/oauth/token`;
 
     try {
@@ -80,13 +82,13 @@ export class AuthService {
         }),
       );
 
-      const userProfile = await this.getUserProfile(data.access_token);
+      // const userProfile = await this.getUserProfile(data.access_token);
 
-      const user = await this.usersService.findByAuth0Sub(userProfile.sub);
+      // const user = await this.usersService.findByAuth0Sub(userProfile.sub);
 
-      if (!user) {
-        await this.createUserFromAuth0Profile(userProfile);
-      }
+      // if (!user) {
+      //   await this.createUserFromAuth0Profile(userProfile);
+      // }
 
       return data;
     } catch (error) {
@@ -96,7 +98,7 @@ export class AuthService {
     }
   }
 
-  async getUserProfile(accessToken: string): Promise<Auth0UserProfile> {
+  async getUserProfile(accessToken: string): Promise<User | null> {
     const domain = this.configService.get<string>('AUTH0_DOMAIN');
     const url = `https://${domain}/userinfo`;
 
@@ -109,7 +111,8 @@ export class AuthService {
         }),
       );
 
-      return data;
+      const user = await this.usersService.findByAuth0Sub(data.sub);
+      return user;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       this.logger.error('Failed to get user profile from Auth0: ' + errorMessage);
@@ -130,9 +133,12 @@ export class AuthService {
       const newUserDto = new CreateUserDto();
       newUserDto.auth0Sub = auth0User.sub;
       newUserDto.email = auth0User.email;
-      newUserDto.firstName = auth0User.given_name || (auth0User.name ? auth0User.name.split(' ')[0] : '') || 'test';
+      newUserDto.firstName =
+        auth0User.given_name || (auth0User.name ? auth0User.name.split(' ')[0] : '') || 'test';
       newUserDto.lastName =
-        auth0User.family_name || (auth0User.name ? auth0User.name.split(' ').slice(1).join(' ') : '') || 'test';
+        auth0User.family_name ||
+        (auth0User.name ? auth0User.name.split(' ').slice(1).join(' ') : '') ||
+        'test';
       newUserDto.country = auth0User.address?.country || 'test';
       newUserDto.birthYear = Number(auth0User.birthdate?.split('-')[0]) || 1900;
 
