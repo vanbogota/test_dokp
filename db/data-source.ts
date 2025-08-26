@@ -13,7 +13,7 @@ export const PostgresDataSource = new DataSource({
   database: process.env.PG_DB,
   synchronize: false,
   logging: true,
-  entities: ['src/entities/**/*.entity{.ts,.js}'],
+  entities: ['dist/src/entities/**/*.entity{.ts,.js}'],
   migrations: [__dirname + '/migrations/*{.ts,.js}'],
   subscribers: [],
 });

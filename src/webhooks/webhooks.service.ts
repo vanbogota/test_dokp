@@ -22,7 +22,10 @@ export class WebhooksService {
 
       const signedPayload = `${timestamp}.${payload.toString()}`;
 
-      const expectedSignature = crypto.createHmac('sha256', webhookSecret).update(signedPayload).digest('hex');
+      const expectedSignature = crypto
+        .createHmac('sha256', webhookSecret)
+        .update(signedPayload)
+        .digest('hex');
 
       const actualSignature = timestampAndSignatures.find(([key]) => key === 'v1')?.[1] || '';
 

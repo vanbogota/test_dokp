@@ -9,7 +9,9 @@ export class ChangeEnumToText1756246426973 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`CREATE TYPE "public"."users_role_enum" AS ENUM('user', 'admin', 'doctor')`);
+    await queryRunner.query(
+      `CREATE TYPE "public"."users_role_enum" AS ENUM('user', 'admin', 'doctor')`,
+    );
     await queryRunner.query(
       `CREATE TYPE "public"."users_identitystatus_enum" AS ENUM('pending', 'verified', 'failed')`,
     );

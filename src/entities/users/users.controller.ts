@@ -8,7 +8,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { UsersService } from './users.service';
-import { User, UserRoles, USER_ROLES } from './user.entity';
+import { User, USER_ROLES } from './user.entity';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserResponseDto } from './dto/UserResponseDto';
 import { CreateUserDto } from './dto/CreateUserDto';

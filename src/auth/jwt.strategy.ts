@@ -17,7 +17,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       audience: process.env.AUTH0_AUDIENCE,
       issuer: `https://${process.env.AUTH0_DOMAIN}/`,
       algorithms: ['RS256'],
-      secretOrKeyProvider: (_request: unknown, token: string, done: (err: Error | null, key?: string) => void) => {
+      secretOrKeyProvider: (
+        _request: unknown,
+        token: string,
+        done: (err: Error | null, key?: string) => void,
+      ) => {
         this.getAuth0PublicKey(token)
           .then((publicKey) => done(null, publicKey))
           .catch((error) => done(error as Error, undefined));

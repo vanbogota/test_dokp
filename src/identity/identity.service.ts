@@ -137,10 +137,16 @@ export class IdentityService {
       if (session.status === VerificationStatus.VERIFIED && session.last_verification_report) {
         try {
           // Получаем отчет о верификации, содержащий личные данные
-          const report = await this.stripe.identity.verificationReports.retrieve(session.last_verification_report);
+          const report = await this.stripe.identity.verificationReports.retrieve(
+            session.last_verification_report,
+          );
 
           // Извлекаем и сохраняем данные из отчета
-          if (report.document?.dob?.day && report.document?.dob?.month && report.document?.dob?.year) {
+          if (
+            report.document?.dob?.day &&
+            report.document?.dob?.month &&
+            report.document?.dob?.year
+          ) {
             user.birthYear = report.document.dob.year;
           }
 
