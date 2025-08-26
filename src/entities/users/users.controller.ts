@@ -8,7 +8,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { UsersService } from './users.service';
-import { User, USER_ROLES } from './user.entity';
+import { User, UserRoles } from './user.entity';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserResponseDto } from './dto/UserResponseDto';
 import { CreateUserDto } from './dto/CreateUserDto';
@@ -20,7 +20,7 @@ export class UsersController {
   constructor(private usersService: UsersService) {}
 
   @Get()
-  @Roles(USER_ROLES.ADMIN)
+  @Roles(UserRoles.ADMIN)
   @ApiOperation({ summary: 'Get all users' })
   @ApiOkResponse({
     description: 'List of users',
@@ -56,7 +56,7 @@ export class UsersController {
   }
 
   @Delete(':id')
-  @Roles(USER_ROLES.ADMIN)
+  @Roles(UserRoles.ADMIN)
   @ApiOperation({ summary: 'Delete a user by ID' })
   @ApiOkResponse({ description: 'User deleted' })
   @ApiNotFoundResponse({ description: 'User not found' })

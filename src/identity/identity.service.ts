@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import Stripe from 'stripe';
-import { User, IdentityStatus, IDENTITY_STATUS } from '../entities/users/user.entity';
+import { User, IdentityStatus } from '../entities/users/user.entity';
 import {
   IdentitySessionResponse,
   IdentityStatusResponse,
@@ -71,13 +71,13 @@ export class IdentityService {
 
       let verificationStatus: VerificationStatus;
       switch (user.identityStatus) {
-        case IDENTITY_STATUS.PENDING:
+        case IdentityStatus.PENDING:
           verificationStatus = VerificationStatus.REQUIRES_INPUT;
           break;
-        case IDENTITY_STATUS.VERIFIED:
+        case IdentityStatus.VERIFIED:
           verificationStatus = VerificationStatus.VERIFIED;
           break;
-        case IDENTITY_STATUS.FAILED:
+        case IdentityStatus.FAILED:
           verificationStatus = VerificationStatus.FAILED;
           break;
         default:
@@ -125,13 +125,13 @@ export class IdentityService {
 
       switch (session.status) {
         case VerificationStatus.VERIFIED:
-          user.identityStatus = IDENTITY_STATUS.VERIFIED;
+          user.identityStatus = IdentityStatus.VERIFIED;
           break;
         case VerificationStatus.FAILED:
-          user.identityStatus = IDENTITY_STATUS.FAILED;
+          user.identityStatus = IdentityStatus.FAILED;
           break;
         default:
-          user.identityStatus = IDENTITY_STATUS.PENDING;
+          user.identityStatus = IdentityStatus.PENDING;
       }
 
       if (session.status === VerificationStatus.VERIFIED && session.last_verification_report) {

@@ -1,7 +1,12 @@
-import { ConflictException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User, IdentityStatus, UserRoles, IDENTITY_STATUS, USER_ROLES } from './user.entity';
+import { User, IdentityStatus, UserRoles } from './user.entity';
 import { CreateUserDto } from './dto/CreateUserDto';
 import { UpdateUserDto } from './dto/UpdateUserDto';
 import { UserResponseDto } from './dto/UserResponseDto';
@@ -31,9 +36,8 @@ export class UsersService {
     try {
       const newUser = this.usersRepository.create({
         ...user,
-        auth0Sub: 'auth0Sub',
-        role: USER_ROLES.USER,
-        identityStatus: IDENTITY_STATUS.PENDING,
+        role: UserRoles.USER,
+        identityStatus: IdentityStatus.PENDING,
       });
       const { id } = await this.usersRepository.save(newUser);
       return id;
