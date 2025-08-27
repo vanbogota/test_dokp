@@ -1,12 +1,11 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Req } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
-  ApiResponse,
   ApiOkResponse,
   ApiNotFoundResponse,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../common/guards/auth.guard';
 import { IdentityService } from './identity.service';
 import {
   IdentitySessionResponse,
@@ -16,13 +15,12 @@ import {
 import { Public } from '../common/decorators/public.decorator';
 
 @ApiTags('identity')
-@Public()
+@ApiBearerAuth()
 @Controller('identity')
 export class IdentityController {
   constructor(private readonly identityService: IdentityService) {}
 
   @Post('start')
-  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Start identity verification process' })
   @ApiOkResponse({ description: 'Returns a client secret for Stripe Identity verification' })
   @ApiNotFoundResponse({ description: 'User not found' })
@@ -33,9 +31,8 @@ export class IdentityController {
   }
 
   @Get('status')
-  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Get identity verification status' })
-  @ApiResponse({ status: 200, description: 'Returns the current status of identity verification' })
+  @ApiOkResponse({ description: 'Returns the current status of identity verification' })
   async getIdentityStatus(@Req() req: any): Promise<IdentityStatusResponse> {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
     const userId = req.user.id;
@@ -43,8 +40,9 @@ export class IdentityController {
   }
 
   @Post('webhook')
+  @Public()
   @ApiOperation({ summary: 'Webhook endpoint for Stripe identity verification events' })
-  @ApiResponse({ status: 200, description: 'Webhook processed successfully' })
+  @ApiOkResponse({ description: 'Webhook processed successfully' })
   async handleWebhook(
     @Body() payload: StripeIdentityWebhookPayload,
   ): Promise<{ received: boolean }> {

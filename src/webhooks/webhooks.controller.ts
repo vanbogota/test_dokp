@@ -34,7 +34,7 @@ export class StripeWebhooksController {
       throw new UnauthorizedException('Invalid webhook signature');
     }
 
-    if (payload.type && payload.type.startsWith('identity.verification_session')) {
+    if (payload.type?.startsWith('identity.verification_session')) {
       await this.identityService.handleWebhook(payload);
     }
 

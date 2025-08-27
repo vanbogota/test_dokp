@@ -5,6 +5,7 @@ import axios from 'axios';
 import { AuthService } from './auth.service';
 import { DecodedToken, JwkKey, JwksResponse } from '../common/interfaces/jwt.interfaces';
 import { UsersService } from '../entities/users/users.service';
+import { CreateUserDto } from '../entities/users/dto/CreateUserDto';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {

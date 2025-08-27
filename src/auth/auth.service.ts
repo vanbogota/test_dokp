@@ -19,7 +19,12 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  async getAccessToken(): Promise<string> {
+  /**
+   * Get an application access token from Auth0. Use it for testing.
+   * @returns The access token as a string.
+   */
+
+  async getAppAccessToken(): Promise<string> {
     const domain = this.configService.get<string>('AUTH0_DOMAIN');
     const clientId = this.configService.get<string>('AUTH0_CLIENT_ID');
     const clientSecret = this.configService.get<string>('AUTH0_CLIENT_SECRET');
@@ -45,6 +50,10 @@ export class AuthService {
     }
   }
 
+  /**
+   * Get the Auth0 authorization URL for user login.
+   * @returns The authorization URL as a string.
+   */
   getAuthorizationUrl(): string {
     const domain = this.configService.get<string>('AUTH0_DOMAIN');
     const clientId = this.configService.get<string>('AUTH0_CLIENT_ID');
@@ -63,7 +72,12 @@ export class AuthService {
     );
   }
 
-  async handleCallback(code: string): Promise<TokenResponse> {
+  /**
+   * Get user tokens from Auth0 using the authorization code.
+   * @param code The authorization code received from Auth0.
+   * @returns The token response from Auth0.
+   */
+  async getUserTokensByCode(code: string): Promise<TokenResponse> {
     const domain = this.configService.get<string>('AUTH0_DOMAIN');
     const clientId = this.configService.get<string>('AUTH0_CLIENT_ID');
     const clientSecret = this.configService.get<string>('AUTH0_CLIENT_SECRET');
@@ -82,14 +96,6 @@ export class AuthService {
         }),
       );
 
-      // const userProfile = await this.getUserProfile(data.access_token);
-
-      // const user = await this.usersService.findByAuth0Sub(userProfile.sub);
-
-      // if (!user) {
-      //   await this.createUserFromAuth0Profile(userProfile);
-      // }
-
       return data;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -98,7 +104,12 @@ export class AuthService {
     }
   }
 
-  async getUserProfile(accessToken: string): Promise<User | null> {
+  /**
+   * Get the Auth0 user profile using the access token.
+   * @param accessToken The access token received from Auth0.
+   * @returns The user profile from Auth0 or null if not found.
+   */
+  async getAuth0UserProfile(accessToken: string): Promise<Auth0UserProfile> {
     const domain = this.configService.get<string>('AUTH0_DOMAIN');
     const url = `https://${domain}/userinfo`;
 
@@ -111,8 +122,7 @@ export class AuthService {
         }),
       );
 
-      const user = await this.usersService.findByAuth0Sub(data.sub);
-      return user;
+      return data;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       this.logger.error('Failed to get user profile from Auth0: ' + errorMessage);
@@ -120,33 +130,30 @@ export class AuthService {
     }
   }
 
-  async validateUser(auth0Sub: string): Promise<User | null> {
-    const user = await this.usersService.findByAuth0Sub(auth0Sub);
-    if (!user) {
-      return null;
-    }
-    return user;
-  }
-
-  async createUserFromAuth0Profile(auth0User: Auth0UserProfile): Promise<string> {
+  async createUserFromAuth0Profile(auth0User: Auth0UserProfile): Promise<void> {
     try {
       const newUserDto = new CreateUserDto();
       newUserDto.auth0Sub = auth0User.sub;
       newUserDto.email = auth0User.email;
       newUserDto.firstName =
-        auth0User.given_name || (auth0User.name ? auth0User.name.split(' ')[0] : '') || 'test';
+        auth0User.given_name || (auth0User.name ? auth0User.name.split(' ')[0] : '') || '';
       newUserDto.lastName =
         auth0User.family_name ||
         (auth0User.name ? auth0User.name.split(' ').slice(1).join(' ') : '') ||
-        'test';
-      newUserDto.country = auth0User.address?.country || 'test';
+        '';
+      newUserDto.country = auth0User.address?.country || '';
       newUserDto.birthYear = Number(auth0User.birthdate?.split('-')[0]) || 1900;
 
-      return await this.usersService.create(newUserDto);
+      await this.usersService.create(newUserDto);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       this.logger.error('Failed to create user from Auth0 profile: ' + errorMessage);
       throw error;
     }
+  }
+
+  async validateUser(auth0sub: string): Promise<boolean> {
+    const user = await this.usersService.findByAuth0Sub(auth0sub);
+    return !!user;
   }
 }

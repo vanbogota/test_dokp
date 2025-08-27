@@ -18,7 +18,7 @@ export class AuthController {
   @ApiOperation({ summary: 'For testing: Get Auth0 access token' })
   @ApiOkResponse({ description: 'Returns an Auth0 access token' })
   async getToken(): Promise<string> {
-    return await this.authService.getAccessToken();
+    return await this.authService.getAppAccessToken();
   }
 
   @Get('login')
@@ -35,7 +35,7 @@ export class AuthController {
 
   @Get('callback')
   @ApiOperation({ summary: 'Handle Auth0 callback after login' })
-  @ApiResponse({ status: 200, description: 'Successfully authenticated' })
+  @ApiOkResponse({ description: 'Successfully authenticated' })
   async callback(@Req() req: any, @Res() res: Response) {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
     const { code } = req.query;
@@ -46,20 +46,28 @@ export class AuthController {
     }
 
     try {
-      const tokens = await this.authService.handleCallback(code);
-      const userProfile = await this.authService.getUserProfile(tokens.access_token);
-
-      const frontendRedirectUrl = this.configService.get<string>('FRONTEND_URL');
+      const tokens = await this.authService.getUserTokensByCode(code);
 
       res.cookie('access_token', tokens.access_token, {
         httpOnly: true,
         secure: true,
-        sameSite: 'lax',
+        sameSite: 'none',
         maxAge: tokens.expires_in * 1000,
       });
 
-      //return res.json({ redirect: `${frontendRedirectUrl}/auth-success` }); //for testing
-      return res.redirect(`${frontendRedirectUrl}/auth-success`);
+      const userProfile = await this.authService.getAuth0UserProfile(tokens.access_token);
+
+      const user = await this.authService.validateUser(userProfile.sub);
+
+      if (user) {
+        //return res.json({ redirect: '${frontendRedirectUrl}/auth-success' }); //for testing
+        const frontendRedirectUrl = this.configService.get<string>('FRONTEND_URL');
+        return res.redirect(`${frontendRedirectUrl}/auth-success`);
+      }
+
+      await this.authService.createUserFromAuth0Profile(userProfile);
+      //return res.json({ redirect: `/identity/start` }); //for testing
+      return res.redirect('/identity/start');
     } catch (error) {
       console.error('Auth callback error:', error);
       return res.redirect('/auth/login');

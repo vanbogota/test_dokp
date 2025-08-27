@@ -1,4 +1,5 @@
 import { Expose } from 'class-transformer';
+import { IsInt, Max, Min } from 'class-validator';
 import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 
 export enum IdentityStatus {
@@ -44,18 +45,21 @@ export class User {
   identityStatus!: IdentityStatus;
 
   @Expose()
-  @Column({ nullable: false, length: 50 })
-  firstName!: string;
+  @Column({ type: 'varchar', length: 50 })
+  firstName?: string;
 
   @Expose()
-  @Column({ nullable: false, length: 50 })
-  lastName!: string;
+  @Column({ type: 'varchar', length: 50 })
+  lastName?: string;
 
   @Expose()
-  @Column({ nullable: false, length: 50 })
-  country!: string;
+  @Column({ type: 'varchar', length: 50 })
+  country?: string;
 
   @Expose()
-  @Column({ nullable: false })
+  @Column()
+  @IsInt()
+  @Min(1900)
+  @Max(new Date().getFullYear() - 16)
   birthYear!: number;
 }

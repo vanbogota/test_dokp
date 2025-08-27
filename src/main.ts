@@ -5,6 +5,7 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { JwtAuthGuard } from './common/guards/auth.guard';
 import * as express from 'express';
+import { RolesGuard } from './common/guards/roles.guard';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -21,7 +22,7 @@ async function bootstrap() {
     }),
   );
   app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
-  app.useGlobalGuards(app.get(JwtAuthGuard));
+  app.useGlobalGuards(app.get(JwtAuthGuard), app.get(RolesGuard));
 
   app.enableCors({
     origin: process.env.FRONTEND_URL || 'http://localhost:3000',

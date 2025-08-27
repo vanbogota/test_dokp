@@ -26,9 +26,9 @@ export class UsersController {
   @ApiOperation({ summary: 'Get all users' })
   @ApiOkResponse({
     description: 'List of users',
-    type: [UserResponseDto],
+    type: [User],
   })
-  async getAll(): Promise<UserResponseDto[]> {
+  async getAll(): Promise<User[]> {
     return await this.usersService.findAll();
   }
 
