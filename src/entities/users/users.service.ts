@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User, IdentityStatus, UserRoles } from './user.entity';
+import { User, IdentityStatus } from './user.entity';
 import { CreateUserDto } from './dto/CreateUserDto';
 import { UpdateUserDto } from './dto/UpdateUserDto';
 import { UserResponseDto } from './dto/UserResponseDto';
@@ -36,7 +36,6 @@ export class UsersService {
     try {
       const newUser = this.usersRepository.create({
         ...user,
-        role: UserRoles.USER,
         identityStatus: IdentityStatus.PENDING,
       });
       const { id } = await this.usersRepository.save(newUser);

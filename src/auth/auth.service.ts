@@ -130,6 +130,10 @@ export class AuthService {
     }
   }
 
+  /**
+   * Create a new user from the Auth0 user profile.
+   * @param auth0User The Auth0 user profile.
+   */
   async createUserFromAuth0Profile(auth0User: Auth0UserProfile): Promise<void> {
     try {
       const newUserDto = new CreateUserDto();
@@ -152,6 +156,11 @@ export class AuthService {
     }
   }
 
+  /**
+   * Validate the user by their Auth0 ID.
+   * @param auth0sub The Auth0 user ID.
+   * @returns True if the user is valid, false otherwise.
+   */
   async validateUser(auth0sub: string): Promise<boolean> {
     const user = await this.usersService.findByAuth0Sub(auth0sub);
     return !!user;

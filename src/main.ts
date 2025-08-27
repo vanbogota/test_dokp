@@ -5,6 +5,7 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { JwtAuthGuard } from './common/guards/auth.guard';
 import * as express from 'express';
+import type { Request, Response } from 'express';
 import { RolesGuard } from './common/guards/roles.guard';
 
 async function bootstrap() {
@@ -14,8 +15,9 @@ async function bootstrap() {
 
   app.use(
     express.json({
-      verify: (req: any, res, buf) => {
-        if (req.url.includes('/stripe/webhook') || req.url.includes('/identity/webhook')) {
+      verify: (req: Request & { rawBody?: Buffer }, _res: Response, buf: Buffer) => {
+        const url = req.url || '';
+        if (url.includes('/stripe/webhooks')) {
           req.rawBody = buf;
         }
       },
@@ -25,7 +27,7 @@ async function bootstrap() {
   app.useGlobalGuards(app.get(JwtAuthGuard), app.get(RolesGuard));
 
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: process.env.FRONTEND_URL,
     credentials: true,
   });
 

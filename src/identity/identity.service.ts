@@ -1,16 +1,14 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import Stripe from 'stripe';
-import { User, IdentityStatus } from '../entities/users/user.entity';
+import { IdentityStatus } from '../entities/users/user.entity';
 import {
-  IdentitySessionResponse,
   IdentityStatusResponse,
   IdentityVerificationData,
   VerificationStatus,
 } from '../common/interfaces/identity.interfaces';
 import { UsersService } from '../entities/users/users.service';
+
 @Injectable()
 export class IdentityService {
   private readonly logger = new Logger(IdentityService.name);
@@ -24,12 +22,15 @@ export class IdentityService {
     if (!stripeApiKey) {
       throw new Error('STRIPE_API_KEY environment variable is not set');
     }
-    this.stripe = new Stripe(stripeApiKey, {
-      apiVersion: '2025-07-30.basil',
-    });
+    this.stripe = new Stripe(stripeApiKey, { apiVersion: '2025-07-30.basil' });
   }
 
-  async startIdentityVerification(userId: string): Promise<IdentitySessionResponse> {
+  /**
+   * Start the identity verification process for a user.
+   * @param userId The ID of the user to verify.
+   * @returns The client secret for the verification session.
+   */
+  async startIdentityVerification(userId: string): Promise<{ client_secret: string | null }> {
     try {
       const user = await this.userService.findById(userId);
       if (!user) {
@@ -44,17 +45,13 @@ export class IdentityService {
         options: {
           document: {
             allowed_types: ['driving_license', 'passport', 'id_card'],
-            require_id_number: true,
-            require_matching_selfie: true,
+            require_id_number: false,
+            require_matching_selfie: false,
           },
         },
-        return_url: `${this.configService.get<string>('APP_URL')}/identity/complete`,
       });
 
-      return {
-        clientSecret: session.client_secret as string,
-        url: session.url,
-      };
+      return { client_secret: session.client_secret };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       this.logger.error(`Failed to start identity verification: ${errorMessage}`);
@@ -62,6 +59,11 @@ export class IdentityService {
     }
   }
 
+  /**
+   * Get the identity verification status for a user.
+   * @param userId The ID of the user to check.
+   * @returns The identity verification status.
+   */
   async getIdentityStatus(userId: string): Promise<IdentityStatusResponse> {
     try {
       const user = await this.userService.findById(userId);
@@ -81,7 +83,7 @@ export class IdentityService {
           verificationStatus = VerificationStatus.FAILED;
           break;
         default:
-          verificationStatus = VerificationStatus.REQUIRES_INPUT;
+          verificationStatus = VerificationStatus.PROCESSING;
       }
 
       const identityData: IdentityVerificationData = {
@@ -102,18 +104,25 @@ export class IdentityService {
     }
   }
 
+  /**
+   * Handle the webhook event from Stripe.
+   * @param payload The webhook payload from Stripe.
+   */
   async handleWebhook(payload: any): Promise<void> {
     try {
-      if (payload.type !== 'identity.verification_session.updated') {
-        this.logger.log(`Ignoring webhook of type: ${payload.type}`);
-        return;
-      }
-
       const session = payload.data.object;
       const userId = session.metadata?.user_id;
 
       if (!userId) {
         this.logger.error('User ID not found in metadata');
+        return;
+      }
+
+      if (
+        session.status !== VerificationStatus.VERIFIED &&
+        session.status !== VerificationStatus.FAILED
+      ) {
+        this.logger.log(`Ignoring session with status: ${session.status}`);
         return;
       }
 
@@ -123,30 +132,15 @@ export class IdentityService {
         return;
       }
 
-      switch (session.status) {
-        case VerificationStatus.VERIFIED:
-          user.identityStatus = IdentityStatus.VERIFIED;
-          break;
-        case VerificationStatus.FAILED:
-          user.identityStatus = IdentityStatus.FAILED;
-          break;
-        default:
-          user.identityStatus = IdentityStatus.PENDING;
-      }
-
-      if (session.status === VerificationStatus.VERIFIED && session.last_verification_report) {
+      if (session.status === VerificationStatus.VERIFIED) {
         try {
-          // Получаем отчет о верификации, содержащий личные данные
           const report = await this.stripe.identity.verificationReports.retrieve(
-            session.last_verification_report,
+            session.last_verification_report?.id,
           );
 
-          // Извлекаем и сохраняем данные из отчета
-          if (
-            report.document?.dob?.day &&
-            report.document?.dob?.month &&
-            report.document?.dob?.year
-          ) {
+          user.identityStatus = IdentityStatus.VERIFIED;
+
+          if (report.document?.dob?.year) {
             user.birthYear = report.document.dob.year;
           }
 
@@ -164,7 +158,11 @@ export class IdentityService {
         } catch (reportError) {
           const errorMessage = reportError instanceof Error ? reportError.message : 'Unknown error';
           this.logger.error(`Failed to retrieve verification report: ${errorMessage}`);
+          user.identityStatus = IdentityStatus.FAILED;
         }
+      }
+      if (session.status === VerificationStatus.FAILED) {
+        user.identityStatus = IdentityStatus.FAILED;
       }
 
       await this.userService.update(userId, user);

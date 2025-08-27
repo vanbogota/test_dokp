@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { WebhooksService } from './webhooks.service';
 import { Request } from 'express';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiOkResponse, ApiBadRequestResponse } from '@nestjs/swagger';
 import { IdentityService } from '../identity/identity.service';
 import { Public } from '../common/decorators/public.decorator';
 
@@ -22,9 +22,10 @@ export class StripeWebhooksController {
     private readonly identityService: IdentityService,
   ) {}
 
-  @Post('webhook')
+  @Post('webhooks')
   @ApiOperation({ summary: 'Handle Stripe webhooks' })
-  @ApiResponse({ status: 200, description: 'Webhook processed successfully' })
+  @ApiOkResponse({ description: 'Webhook processed successfully' })
+  @ApiBadRequestResponse({ description: 'Invalid webhook payload' })
   async handleStripeWebhook(
     @Headers('stripe-signature') signature: string,
     @Req() req: RawBodyRequest<Request>,
@@ -34,10 +35,9 @@ export class StripeWebhooksController {
       throw new UnauthorizedException('Invalid webhook signature');
     }
 
-    if (payload.type?.startsWith('identity.verification_session')) {
+    if (payload?.type?.startsWith('identity.verification_session')) {
       await this.identityService.handleWebhook(payload);
     }
-
     return { received: true };
   }
 }

@@ -37,6 +37,8 @@ export class AuthController {
   @ApiOperation({ summary: 'Handle Auth0 callback after login' })
   @ApiOkResponse({ description: 'Successfully authenticated' })
   async callback(@Req() req: any, @Res() res: Response) {
+    const frontendRedirectUrl = this.configService.get<string>('FRONTEND_URL');
+    const nodeEnv = this.configService.get<string>('NODE_ENV');
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
     const { code } = req.query;
 
@@ -50,8 +52,8 @@ export class AuthController {
 
       res.cookie('access_token', tokens.access_token, {
         httpOnly: true,
-        secure: true,
-        sameSite: 'none',
+        secure: nodeEnv === 'production',
+        sameSite: nodeEnv === 'production' ? 'none' : 'lax',
         maxAge: tokens.expires_in * 1000,
       });
 
@@ -61,7 +63,6 @@ export class AuthController {
 
       if (user) {
         //return res.json({ redirect: '${frontendRedirectUrl}/auth-success' }); //for testing
-        const frontendRedirectUrl = this.configService.get<string>('FRONTEND_URL');
         return res.redirect(`${frontendRedirectUrl}/auth-success`);
       }
 

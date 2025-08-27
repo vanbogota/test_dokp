@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { UsersModule } from './entities/users/users.module';
 import { PostgresDataSource } from '../db/data-source';
 import { AuthModule } from './auth/auth.module';
@@ -23,6 +22,6 @@ import { JwtAuthGuard } from './common/guards/auth.guard';
     WebhooksModule,
   ],
   controllers: [AppController],
-  providers: [AppService, RolesGuard, JwtAuthGuard],
+  providers: [RolesGuard, JwtAuthGuard],
 })
 export class AppModule {}

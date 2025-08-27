@@ -5,7 +5,6 @@ import axios from 'axios';
 import { AuthService } from './auth.service';
 import { DecodedToken, JwkKey, JwksResponse } from '../common/interfaces/jwt.interfaces';
 import { UsersService } from '../entities/users/users.service';
-import { CreateUserDto } from '../entities/users/dto/CreateUserDto';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -23,7 +22,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         token: string,
         done: (err: Error | null, key?: string) => void,
       ) => {
-        console.log('JwtStrategy works! ', token);
         this.getAuth0PublicKey(token)
           .then((publicKey) => done(null, publicKey))
           .catch((error) => done(error as Error, undefined));
@@ -39,7 +37,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         timeout: 5000,
       });
       jwks = response.data;
-      console.log('jwks got!');
     } catch (error) {
       console.error('Error fetching JWKS: ', error);
       throw new UnauthorizedException('Unable to fetch JWKS from Auth0');
@@ -47,7 +44,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     const decodedToken = this.decodeToken(token);
     if (!decodedToken.header || typeof decodedToken.header.kid !== 'string') {
-      console.log('No kid found in token');
+      console.error('No kid found in token');
       throw new UnauthorizedException('No kid found in token');
     }
 
@@ -79,7 +76,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: any): Promise<any> {
-    console.log('invoke Validating JWT payload');
     const user = await this.userService.findByAuth0Sub(payload.sub);
     return user;
   }

@@ -22,7 +22,7 @@ export class UsersController {
   constructor(private usersService: UsersService) {}
 
   @Get()
-  @Roles(UserRoles.ADMIN)
+  @Roles(UserRoles.ADMIN, UserRoles.DOCTOR)
   @ApiOperation({ summary: 'Get all users' })
   @ApiOkResponse({
     description: 'List of users',
@@ -42,6 +42,7 @@ export class UsersController {
 
   //for testing
   @Post()
+  @Roles(UserRoles.ADMIN)
   @ApiOperation({ summary: 'Create a new user' })
   @ApiCreatedResponse({ type: String })
   @ApiBadRequestResponse({ description: 'Validation failed' })
@@ -50,6 +51,7 @@ export class UsersController {
   }
 
   @Put(':id')
+  @Roles(UserRoles.ADMIN)
   @ApiOperation({ summary: 'Update a user by ID' })
   @ApiOkResponse({ description: 'User updated', type: User })
   @ApiNotFoundResponse({ description: 'User not found' })
