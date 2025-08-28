@@ -47,5 +47,5 @@ Thumbs.db
 /.cache
 .parcel-cache
 .env
-.package-lock.json
+package-lock.json
 /secrets
