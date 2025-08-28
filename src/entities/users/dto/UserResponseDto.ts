@@ -51,4 +51,37 @@ export class UserResponseDto {
   @IsNumber()
   @IsNotEmpty()
   birthYear!: number;
+
+  @ApiProperty({ enum: UserRoles, example: UserRoles.USER })
+  @Expose()
+  @IsEnum(UserRoles)
+  @IsOptional()
+  role?: UserRoles;
+
+  @ApiProperty({ example: 'john.doe@example.com' })
+  @Expose()
+  @IsEmail()
+  @IsNotEmpty()
+  email!: string;
+
+  @ApiProperty({ example: 'John' })
+  @Expose()
+  @IsString()
+  firstName?: string;
+
+  @ApiProperty({ example: 'Doe' })
+  @Expose()
+  @IsString()
+  lastName?: string;
+
+  @ApiProperty({ example: 'Germany' })
+  @Expose()
+  @IsString()
+  country?: string;
+
+  @ApiProperty({ example: 1990 })
+  @Expose()
+  @IsNumber()
+  @IsNotEmpty()
+  birthYear!: number;
 }
