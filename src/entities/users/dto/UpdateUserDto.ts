@@ -1,13 +1,4 @@
-import { ApiProperty, PartialType } from '@nestjs/swagger';
-import { CreateUserDto } from './CreateUserDto';
-import { IdentityStatus } from '../user.entity';
-import { Expose } from 'class-transformer';
-import { IsEnum, IsOptional } from 'class-validator';
+import { OmitType, PartialType } from '@nestjs/swagger';
+import { UserResponseDto } from './UserResponseDto';
 
-export class UpdateUserDto extends PartialType(CreateUserDto) {
-  @ApiProperty({ enum: IdentityStatus, example: IdentityStatus.PENDING })
-  @Expose()
-  @IsEnum(IdentityStatus)
-  @IsOptional()
-  identityStatus?: IdentityStatus;
-}
+export class UpdateUserDto extends PartialType(OmitType(UserResponseDto, ['id'] as const)) {}
