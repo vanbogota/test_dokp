@@ -10,9 +10,9 @@ import { IdentityService } from './identity.service';
 import { IdentityStatusResponse } from '../common/interfaces/identity.interfaces';
 import { Public } from '../common/decorators/public.decorator';
 
-@Public() //for testing
+//@Public() //for testing
 @ApiTags('identity')
-// @ApiBearerAuth()
+@ApiBearerAuth()
 @Controller('identity')
 export class IdentityController {
   constructor(private readonly identityService: IdentityService) {}
@@ -25,6 +25,7 @@ export class IdentityController {
     console.log(`start identity`, req.user);
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
     const userId = req?.user?.id;
+
     return this.identityService.startIdentityVerification(userId);
   }
 

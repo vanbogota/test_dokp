@@ -36,13 +36,12 @@ export class StripeWebhooksController {
   ): Promise<{ received: boolean }> {
     this.logger.log(`Received Stripe webhook: ${payload?.type}`);
 
-    if (!req.rawBody || !this.webhooksService.validateStripeSignature(req.rawBody, signature)) {
-      this.logger.error('Invalid webhook signature');
-      throw new UnauthorizedException('Invalid webhook signature');
-    }
-
     if (payload?.type?.startsWith('identity.verification_session')) {
-      this.logger.log(`Handling Stripe webhook: ${payload?.type}`);
+      if (!req.rawBody || !this.webhooksService.validateStripeSignature(req.rawBody, signature)) {
+        this.logger.error('Invalid webhook signature');
+        throw new UnauthorizedException('Invalid webhook signature');
+      }
+
       await this.identityService.handleWebhook(payload);
     }
     return { received: true };

@@ -6,6 +6,7 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './jwt.strategy';
 import { UsersModule } from '../entities/users/users.module';
+import { IdentityModule } from '../identity/identity.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { UsersModule } from '../entities/users/users.module';
     HttpModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule,
+    IdentityModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy],

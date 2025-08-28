@@ -135,13 +135,13 @@ export class AuthService {
    * Create a new user from the Auth0 user profile.
    * @param auth0User The Auth0 user profile.
    */
-  async createUserFromAuth0Profile(auth0User: Auth0UserProfile): Promise<string> {
+  async getOrCreateUserFromAuth0Profile(auth0User: Auth0UserProfile): Promise<User | null> {
     console.log('Invoking user creation from Auth0 profile');
     try {
       const existingUser: User | null = await this.usersService.findByAuth0Sub(auth0User.sub);
       if (existingUser) {
-        this.logger.log(`User ID=${existingUser.id} logged in the system.`);
-        return existingUser.id;
+        this.logger.log(`Existing user ID=${existingUser.id} logged in the system.`);
+        return existingUser;
       }
       console.log('Creating new user');
       const newUserDto = new CreateUserDto();

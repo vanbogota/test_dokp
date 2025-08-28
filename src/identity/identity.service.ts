@@ -111,6 +111,7 @@ export class IdentityService {
    * @param payload The webhook payload from Stripe.
    */
   async handleWebhook(payload: any): Promise<void> {
+    this.logger.log(`Handling Stripe webhook: ${payload?.type}`);
     try {
       const session = payload.data.object;
       const userId = session.metadata?.user_id;
@@ -137,10 +138,10 @@ export class IdentityService {
       if (session.status === VerificationStatus.VERIFIED) {
         try {
           this.logger.log(
-            `Handling verified status session: ${session.id} with report ID: ${session.last_verification_report?.id}`,
+            `Handling verified status session: ${session.id} with report ID: ${session.last_verification_report}`,
           );
           const report = await this.stripe.identity.verificationReports.retrieve(
-            session.last_verification_report?.id,
+            session.last_verification_report,
           );
 
           user.identityStatus = IdentityStatus.VERIFIED;

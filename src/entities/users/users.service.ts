@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User, IdentityStatus } from './user.entity';
+import { User, IdentityStatus, UserRoles } from './user.entity';
 import { CreateUserDto } from './dto/CreateUserDto';
 import { UpdateUserDto } from './dto/UpdateUserDto';
 import { UserResponseDto } from './dto/UserResponseDto';
@@ -38,15 +38,20 @@ export class UsersService {
     });
   }
 
-  async create(user: CreateUserDto): Promise<string> {
+  async create(user: CreateUserDto): Promise<UserResponseDto> {
     try {
       const newUser = this.usersRepository.create({
         ...user,
+        role: UserRoles.USER,
         identityStatus: IdentityStatus.PENDING,
       });
-      const { id } = await this.usersRepository.save(newUser);
-      this.logger.log(`User created: ${id}`);
-      return id;
+      const result = await this.usersRepository.save(newUser);
+
+      this.logger.log(`User created: ${result.id}`);
+
+      return plainToInstance(UserResponseDto, result, {
+        excludeExtraneousValues: true,
+      });
     } catch (error) {
       //check for unique constraint violation in PostgreSQL
       const pgError = error as {

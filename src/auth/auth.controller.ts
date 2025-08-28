@@ -4,6 +4,8 @@ import { ApiTags, ApiOperation, ApiResponse, ApiOkResponse } from '@nestjs/swagg
 import { Response } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { Public } from '../common/decorators/public.decorator';
+import { IdentityStatus } from '../entities/users/user.entity';
+import { IdentityService } from '../identity/identity.service';
 
 @Public()
 @ApiTags('auth')
@@ -13,6 +15,7 @@ export class AuthController {
 
   constructor(
     private readonly authService: AuthService,
+    private readonly identityService: IdentityService,
     private readonly configService: ConfigService,
   ) {}
 
@@ -43,7 +46,6 @@ export class AuthController {
     const nodeEnv = this.configService.get<string>('NODE_ENV');
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
     const { code } = req.query;
-    console.log('Auth0 callback code:', code);
 
     if (!code) {
       // return res.json({ redirect: '/auth/login' }); //for testing
@@ -55,24 +57,29 @@ export class AuthController {
 
       res.cookie('access_token', tokens.access_token, {
         httpOnly: true,
-        secure: nodeEnv === 'production',
-        sameSite: nodeEnv === 'production' ? 'none' : 'lax',
+        secure: true,
+        // secure: nodeEnv === 'production',
+        sameSite: 'none',
+        // sameSite: nodeEnv === 'production' ? 'none' : 'lax',
         maxAge: tokens.expires_in * 1000,
       });
 
       const userProfile = await this.authService.getAuth0UserProfile(tokens.access_token);
 
-      const user = await this.authService.validateUser(userProfile.sub);
-      if (user) {
-        this.logger.log(`User ID=${user} logged in the system.`);
+      const user = await this.authService.getOrCreateUserFromAuth0Profile(userProfile);
+
+      if (user?.identityStatus === IdentityStatus.VERIFIED) {
+        this.logger.log(`User ID=${user.id} logged in the system.`);
         // return res.json({ redirect: '${frontendRedirectUrl}/auth-success' }); //for testing
         return res.redirect(`${frontendRedirectUrl}/auth-success.html`);
       }
 
-      const userId = await this.authService.createUserFromAuth0Profile(userProfile);
-      this.logger.log(`User ID=${userId} should pass Stripe verification process.`);
-      // return res.json({ redirect: `/identity/start` }); //for testing
-      return res.redirect(`${frontendRedirectUrl}/verify.html`);
+      this.logger.log(`User ID=${user!.id} should pass Stripe verification process.`);
+      // Optionally pre-create a VerificationSession here to warm up Stripe:
+      // await this.identityService.startIdentityVerification(user!.id);
+      // For a browser flow, redirect to a frontend page that will call /identity/start
+      // to securely obtain client_secret and open the Stripe modal.
+      return res.redirect(`${frontendRedirectUrl}/home.html`);
     } catch (error) {
       this.logger.log('Auth callback error:', error);
       return res.redirect(`${frontendRedirectUrl}/failed.html`);

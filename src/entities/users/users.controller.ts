@@ -22,7 +22,7 @@ export class UsersController {
   constructor(private usersService: UsersService) {}
 
   @Get()
-  @Roles(UserRoles.ADMIN, UserRoles.DOCTOR)
+  @Roles(UserRoles.ADMIN)
   @ApiOperation({ summary: 'Get all users' })
   @ApiOkResponse({
     description: 'List of users',
@@ -44,9 +44,9 @@ export class UsersController {
   @Post()
   @Roles(UserRoles.ADMIN)
   @ApiOperation({ summary: 'Create a new user' })
-  @ApiCreatedResponse({ type: String })
+  @ApiCreatedResponse({ type: UserResponseDto })
   @ApiBadRequestResponse({ description: 'Validation failed' })
-  async create(@Body() user: CreateUserDto): Promise<string> {
+  async create(@Body() user: CreateUserDto): Promise<UserResponseDto> {
     return await this.usersService.create(user);
   }
 
