@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Headers,
+  Logger,
   Post,
   RawBodyRequest,
   Req,
@@ -17,6 +18,8 @@ import { Public } from '../common/decorators/public.decorator';
 @Public()
 @Controller('stripe')
 export class StripeWebhooksController {
+  private readonly logger = new Logger(StripeWebhooksController.name);
+
   constructor(
     private readonly webhooksService: WebhooksService,
     private readonly identityService: IdentityService,
@@ -31,11 +34,15 @@ export class StripeWebhooksController {
     @Req() req: RawBodyRequest<Request>,
     @Body() payload: any,
   ): Promise<{ received: boolean }> {
+    this.logger.log(`Received Stripe webhook: ${payload?.type}`);
+
     if (!req.rawBody || !this.webhooksService.validateStripeSignature(req.rawBody, signature)) {
+      this.logger.error('Invalid webhook signature');
       throw new UnauthorizedException('Invalid webhook signature');
     }
 
     if (payload?.type?.startsWith('identity.verification_session')) {
+      this.logger.log(`Handling Stripe webhook: ${payload?.type}`);
       await this.identityService.handleWebhook(payload);
     }
     return { received: true };

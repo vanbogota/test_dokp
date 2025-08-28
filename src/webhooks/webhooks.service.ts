@@ -14,6 +14,8 @@ export class WebhooksService {
    * @returns True if the signature is valid, false otherwise.
    */
   validateStripeSignature(payload: Buffer, signature: string): boolean {
+    this.logger.log(`Validating webhook signature.`);
+
     try {
       const webhookSecret = this.configService.get<string>('STRIPE_WEBHOOK_SECRET');
 
@@ -24,7 +26,6 @@ export class WebhooksService {
 
       const timestampAndSignatures = signature.split(',').map((item) => item.split('='));
       const timestamp = timestampAndSignatures.find(([key]) => key === 't')?.[1] || '';
-      console.log('timestamp:', timestamp);
 
       const signedPayload = `${timestamp}.${payload.toString()}`;
 

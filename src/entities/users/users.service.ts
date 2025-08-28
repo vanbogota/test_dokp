@@ -2,6 +2,7 @@ import {
   ConflictException,
   Injectable,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -14,6 +15,8 @@ import { plainToInstance } from 'class-transformer';
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
@@ -25,7 +28,10 @@ export class UsersService {
 
   async findById(id: string): Promise<UserResponseDto> {
     const user = await this.usersRepository.findOne({ where: { id } });
-    if (!user) throw new NotFoundException('User not found.');
+    if (!user) {
+      this.logger.error(`User not found: ${id}`);
+      throw new NotFoundException('User not found.');
+    }
 
     return plainToInstance(UserResponseDto, user, {
       excludeExtraneousValues: true,
@@ -39,8 +45,10 @@ export class UsersService {
         identityStatus: IdentityStatus.PENDING,
       });
       const { id } = await this.usersRepository.save(newUser);
+      this.logger.log(`User created: ${id}`);
       return id;
     } catch (error) {
+      //check for unique constraint violation in PostgreSQL
       const pgError = error as {
         code?: string;
         detail?: string;
@@ -52,18 +60,24 @@ export class UsersService {
         } else if (pgError.detail?.includes('email')) {
           field = 'email';
         }
+        this.logger.error(`Unique constraint violated for field: ${field}`);
         throw new ConflictException(`Unique constraint violated for field: ${field}`);
       }
+      this.logger.error('Failed to create user');
       throw new InternalServerErrorException('Failed to create user');
     }
   }
 
   async update(id: string, user: UpdateUserDto): Promise<UserResponseDto> {
     const entity = await this.usersRepository.preload({ id, ...user });
-    if (!entity) throw new NotFoundException('User not found.');
+    if (!entity) {
+      this.logger.error(`User not found: ${id}`);
+      throw new NotFoundException('User not found.');
+    }
 
     try {
       const updatedUser = await this.usersRepository.save(entity);
+      this.logger.log(`User updated: ${id}`);
       return plainToInstance(UserResponseDto, updatedUser, { excludeExtraneousValues: true });
     } catch (error) {
       const pgError = error as {
@@ -77,8 +91,10 @@ export class UsersService {
         } else if (pgError.detail?.includes('email')) {
           field = 'email';
         }
+        this.logger.error(`Unique constraint violated for field: ${field}`);
         throw new ConflictException(`Unique constraint violated for field: ${field}`);
       }
+      this.logger.error('Failed to create user');
       throw new InternalServerErrorException('Failed to update user');
     }
   }
