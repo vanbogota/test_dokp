@@ -79,7 +79,7 @@ export class AuthController {
       // await this.identityService.startIdentityVerification(user!.id);
       // For a browser flow, redirect to a frontend page that will call /identity/start
       // to securely obtain client_secret and open the Stripe modal.
-      return res.redirect(`${frontendRedirectUrl}/home.html`);
+      return res.redirect(`${frontendRedirectUrl}/verify.html`);
     } catch (error) {
       this.logger.log('Auth callback error:', error);
       return res.redirect(`${frontendRedirectUrl}/failed.html`);

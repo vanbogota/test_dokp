@@ -132,7 +132,7 @@ export class AuthService {
   }
 
   /**
-   * Create a new user from the Auth0 user profile.
+   * Get or create a new user from the Auth0 user profile.
    * @param auth0User The Auth0 user profile.
    */
   async getOrCreateUserFromAuth0Profile(auth0User: Auth0UserProfile): Promise<User | null> {
