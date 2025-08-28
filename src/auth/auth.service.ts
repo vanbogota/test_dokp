@@ -3,7 +3,7 @@ import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../entities/users/users.service';
-import { User } from '../entities/users/user.entity';
+import { IdentityStatus, User } from '../entities/users/user.entity';
 import { firstValueFrom } from 'rxjs';
 import { Auth0UserProfile, TokenResponse } from '../common/interfaces/auth.interfaces';
 import { CreateUserDto } from '../entities/users/dto/CreateUserDto';
@@ -78,6 +78,7 @@ export class AuthService {
    * @returns The token response from Auth0.
    */
   async getUserTokensByCode(code: string): Promise<TokenResponse> {
+    console.log('Getting user tokens by code.');
     const domain = this.configService.get<string>('AUTH0_DOMAIN');
     const clientId = this.configService.get<string>('AUTH0_CLIENT_ID');
     const clientSecret = this.configService.get<string>('AUTH0_CLIENT_SECRET');
@@ -100,7 +101,7 @@ export class AuthService {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       this.logger.error('Auth0 token exchange failed: ' + errorMessage);
-      throw new UnauthorizedException('Auth0 authentication failed');
+      throw new UnauthorizedException('Auth0 authentication failed: ' + errorMessage);
     }
   }
 
@@ -134,8 +135,15 @@ export class AuthService {
    * Create a new user from the Auth0 user profile.
    * @param auth0User The Auth0 user profile.
    */
-  async createUserFromAuth0Profile(auth0User: Auth0UserProfile): Promise<void> {
+  async createUserFromAuth0Profile(auth0User: Auth0UserProfile): Promise<string> {
+    console.log('Invoking user creation from Auth0 profile');
     try {
+      const existingUser: User | null = await this.usersService.findByAuth0Sub(auth0User.sub);
+      if (existingUser) {
+        this.logger.log(`User ID=${existingUser.id} logged in the system.`);
+        return existingUser.id;
+      }
+      console.log('Creating new user');
       const newUserDto = new CreateUserDto();
       newUserDto.auth0Sub = auth0User.sub;
       newUserDto.email = auth0User.email;
@@ -148,7 +156,7 @@ export class AuthService {
       newUserDto.country = auth0User.address?.country || '';
       newUserDto.birthYear = Number(auth0User.birthdate?.split('-')[0]) || 1900;
 
-      await this.usersService.create(newUserDto);
+      return await this.usersService.create(newUserDto);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       this.logger.error('Failed to create user from Auth0 profile: ' + errorMessage);
@@ -161,8 +169,11 @@ export class AuthService {
    * @param auth0sub The Auth0 user ID.
    * @returns True if the user is valid, false otherwise.
    */
-  async validateUser(auth0sub: string): Promise<boolean> {
+  async validateUser(auth0sub: string): Promise<string | null> {
     const user = await this.usersService.findByAuth0Sub(auth0sub);
-    return !!user;
+    if (user?.identityStatus === IdentityStatus.VERIFIED) {
+      return user.id;
+    }
+    return null;
   }
 }

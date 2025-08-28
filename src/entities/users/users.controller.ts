@@ -51,7 +51,7 @@ export class UsersController {
   }
 
   @Put(':id')
-  @Roles(UserRoles.ADMIN)
+  //@Roles(UserRoles.ADMIN)
   @ApiOperation({ summary: 'Update a user by ID' })
   @ApiOkResponse({ description: 'User updated', type: User })
   @ApiNotFoundResponse({ description: 'User not found' })

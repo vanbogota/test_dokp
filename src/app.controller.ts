@@ -10,16 +10,8 @@ export class AppController {
   constructor(private readonly userService: UsersService) {}
 
   //for testing auth0
-  @Post('me')
+  @Get('me')
   login(@Req() req: Request) {
     return req.user;
-  }
-
-  @Get('me')
-  @ApiOperation({ summary: 'Get a user by ID' })
-  @ApiOkResponse({ type: UserResponseDto })
-  @ApiNotFoundResponse({ description: 'User not found' })
-  async getProfile(@Body('id', ParseUUIDPipe) id: string): Promise<UserResponseDto> {
-    return this.userService.findById(id);
   }
 }

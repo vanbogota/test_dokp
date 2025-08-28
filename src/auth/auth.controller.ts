@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Req, Res } from '@nestjs/common';
+import { Controller, Get, Post, Req, Res, Logger } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { ApiTags, ApiOperation, ApiResponse, ApiOkResponse } from '@nestjs/swagger';
 import { Response } from 'express';
@@ -9,14 +9,16 @@ import { Public } from '../common/decorators/public.decorator';
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
+  private readonly logger = new Logger(AuthController.name);
+
   constructor(
     private readonly authService: AuthService,
     private readonly configService: ConfigService,
   ) {}
 
   @Get('token') //for tests
-  @ApiOperation({ summary: 'For testing: Get Auth0 access token' })
-  @ApiOkResponse({ description: 'Returns an Auth0 access token' })
+  @ApiOperation({ summary: 'For testing: Get Auth0 app access token' })
+  @ApiOkResponse({ description: 'Returns an Auth0 app access token' })
   async getToken(): Promise<string> {
     return await this.authService.getAppAccessToken();
   }
@@ -29,7 +31,7 @@ export class AuthController {
   })
   login(@Res() res: Response) {
     const authUrl = this.authService.getAuthorizationUrl();
-    //return res.json({ authUrl }); //for testing
+    // return res.json({ authUrl }); //for testing
     return res.redirect(authUrl);
   }
 
@@ -41,10 +43,11 @@ export class AuthController {
     const nodeEnv = this.configService.get<string>('NODE_ENV');
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
     const { code } = req.query;
+    console.log('Auth0 callback code:', code);
 
     if (!code) {
-      //return res.json({ redirect: '/auth/login' }); //for testing
-      return res.redirect('/auth/login');
+      // return res.json({ redirect: '/auth/login' }); //for testing
+      return res.redirect(`${frontendRedirectUrl}/failed.html`);
     }
 
     try {
@@ -60,31 +63,33 @@ export class AuthController {
       const userProfile = await this.authService.getAuth0UserProfile(tokens.access_token);
 
       const user = await this.authService.validateUser(userProfile.sub);
-
       if (user) {
-        //return res.json({ redirect: '${frontendRedirectUrl}/auth-success' }); //for testing
-        return res.redirect(`${frontendRedirectUrl}/auth-success`);
+        this.logger.log(`User ID=${user} logged in the system.`);
+        // return res.json({ redirect: '${frontendRedirectUrl}/auth-success' }); //for testing
+        return res.redirect(`${frontendRedirectUrl}/auth-success.html`);
       }
 
-      await this.authService.createUserFromAuth0Profile(userProfile);
-      //return res.json({ redirect: `/identity/start` }); //for testing
-      return res.redirect('/identity/start');
+      const userId = await this.authService.createUserFromAuth0Profile(userProfile);
+      this.logger.log(`User ID=${userId} should pass Stripe verification process.`);
+      // return res.json({ redirect: `/identity/start` }); //for testing
+      return res.redirect(`${frontendRedirectUrl}/verify.html`);
     } catch (error) {
-      console.error('Auth callback error:', error);
-      return res.redirect('/auth/login');
+      this.logger.log('Auth callback error:', error);
+      return res.redirect(`${frontendRedirectUrl}/failed.html`);
     }
   }
 
   @Post('logout')
   @ApiOperation({ summary: 'Get logout URL for Auth0' })
   @ApiResponse({ status: 200, description: 'Returns Auth0 logout URL' })
-  logout() {
+  logout(@Res() res: Response) {
     const domain = this.configService.get<string>('AUTH0_DOMAIN');
     const clientId = this.configService.get<string>('AUTH0_CLIENT_ID');
-    const returnTo = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3000';
+    const returnTo = this.configService.get<string>('FRONTEND_URL');
 
-    const logoutUrl = `https://${domain}/v2/logout?client_id=${clientId}&returnTo=${encodeURIComponent(returnTo)}`;
+    const logoutUrl = `https://${domain}/v2/logout?client_id=${clientId}&returnTo=${encodeURIComponent(returnTo! + '/home.html')}`;
 
-    return { logoutUrl };
+    return res.json({ logoutUrl });
+    // return res.redirect(logoutUrl);
   }
 }

@@ -31,12 +31,15 @@ export class IdentityService {
    * @returns The client secret for the verification session.
    */
   async startIdentityVerification(userId: string): Promise<{ client_secret: string | null }> {
+    console.log('Starting identity verification for user:', userId);
     try {
       const user = await this.userService.findById(userId);
+      console.log('User found:', user);
       if (!user) {
         throw new NotFoundException(`User with ID ${userId} not found`);
       }
 
+      console.log('Creating Stripe verification session for user:');
       const session = await this.stripe.identity.verificationSessions.create({
         type: 'document',
         metadata: {
@@ -109,6 +112,7 @@ export class IdentityService {
    * @param payload The webhook payload from Stripe.
    */
   async handleWebhook(payload: any): Promise<void> {
+    console.log('Handling identity webhook');
     try {
       const session = payload.data.object;
       const userId = session.metadata?.user_id;
