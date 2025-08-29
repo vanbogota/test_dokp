@@ -1,22 +1,32 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppController } from './app.controller';
-import { AppService } from './app.service';
+import { UsersService } from './entities/users/users.service';
+import { Request } from 'express';
 
 describe('AppController', () => {
-  let appController: AppController;
+  let controller: AppController;
 
   beforeEach(async () => {
-    const app: TestingModule = await Test.createTestingModule({
+    const module: TestingModule = await Test.createTestingModule({
       controllers: [AppController],
-      providers: [AppService],
+      providers: [
+        {
+          provide: UsersService,
+          useValue: {},
+        },
+      ],
     }).compile();
 
-    appController = app.get<AppController>(AppController);
+    controller = module.get<AppController>(AppController);
   });
 
-  describe('root', () => {
-    it('should return "Hello World!"', () => {
-      expect(appController.login({})).toBe('Hello World!');
-    });
+  it('should be defined', () => {
+    expect(controller).toBeDefined();
+  });
+
+  it('login should return req.user', () => {
+    const user = { id: 'u1', email: 'u@example.com' };
+    const req = { user } as unknown as Request;
+    expect(controller.login(req)).toBe(user);
   });
 });
