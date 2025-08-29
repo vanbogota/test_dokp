@@ -42,24 +42,4 @@ export class IdentityController {
     const userId = req?.user?.id;
     return this.identityService.getIdentityStatus(userId);
   }
-
-  @Public()
-  @Get('session/:id')
-  @ApiOperation({ summary: 'Get identity verification session' })
-  @ApiOkResponse({ description: 'Returns the identity verification session' })
-  async getSession(@Param('id') id: string): Promise<Stripe.Identity.VerificationSession> {
-    return this.identityService.getVerificationSession(id);
-  }
-
-  @Public()
-  @Get('sessions')
-  @ApiOperation({ summary: 'Get identity verification sessions' })
-  @ApiOkResponse({ description: 'Returns the identity verification sessions' })
-  async getSessions(
-    @Body('client_reference_id') client_reference_id?: string,
-    @Body('status') status?: VerificationStatus,
-    @Body('limit') limit?: number,
-  ): Promise<Stripe.Identity.VerificationSession[]> {
-    return this.identityService.getAllVerificationSessions(client_reference_id, status, limit);
-  }
 }
