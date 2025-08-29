@@ -43,22 +43,26 @@ async function bootstrap() {
         }
       },
     }),
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+
     cookieParser(),
   );
   app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
   app.useGlobalGuards(app.get(JwtAuthGuard), app.get(RolesGuard));
 
+  //TOD: delete localhosts on production
   app.enableCors({
-    origin: [
-      'http://localhost:3000',
-      'https://localhost:3000',
-      'http://127.0.0.1:5500',
-      'https://127.0.0.1:5500',
-      'http://localhost:5500',
-      'https://localhost:5500',
-      process.env.AUTH0_DOMAIN,
-    ],
+    origin:
+      process.env.NODE_ENV === 'production'
+        ? [process.env.FRONTEND_URL]
+        : [
+            'http://localhost:3000',
+            'https://localhost:3000',
+            'http://127.0.0.1:5500',
+            'https://127.0.0.1:5500',
+            'http://localhost:5500',
+            'https://localhost:5500',
+            process.env.AUTH0_DOMAIN,
+          ],
     credentials: true,
   });
 

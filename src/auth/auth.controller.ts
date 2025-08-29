@@ -1,11 +1,10 @@
-import { Controller, Get, Post, Req, Res, Logger } from '@nestjs/common';
+import { Controller, Get, Req, Res, Logger } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { ApiTags, ApiOperation, ApiResponse, ApiOkResponse } from '@nestjs/swagger';
-import { Response } from 'express';
+import { Response, Request } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { Public } from '../common/decorators/public.decorator';
 import { IdentityStatus } from '../entities/users/user.entity';
-import { IdentityService } from '../identity/identity.service';
 
 @Public()
 @ApiTags('auth')
@@ -15,7 +14,6 @@ export class AuthController {
 
   constructor(
     private readonly authService: AuthService,
-    private readonly identityService: IdentityService,
     private readonly configService: ConfigService,
   ) {}
 
@@ -34,21 +32,17 @@ export class AuthController {
   })
   login(@Res() res: Response) {
     const authUrl = this.authService.getAuthorizationUrl();
-    // return res.json({ authUrl }); //for testing
     return res.redirect(authUrl);
   }
 
   @Get('callback')
   @ApiOperation({ summary: 'Handle Auth0 callback after login' })
   @ApiOkResponse({ description: 'Successfully authenticated' })
-  async callback(@Req() req: any, @Res() res: Response) {
+  async callback(@Req() req: Request, @Res() res: Response) {
     const frontendRedirectUrl = this.configService.get<string>('FRONTEND_URL');
-    const nodeEnv = this.configService.get<string>('NODE_ENV');
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-    const { code } = req.query;
+    const { code } = req.query as { code?: string };
 
     if (!code) {
-      // return res.json({ redirect: '/auth/login' }); //for testing
       return res.redirect(`${frontendRedirectUrl}/failed.html`);
     }
 
@@ -58,9 +52,7 @@ export class AuthController {
       res.cookie('access_token', tokens.access_token, {
         httpOnly: true,
         secure: true,
-        // secure: nodeEnv === 'production',
         sameSite: 'none',
-        // sameSite: nodeEnv === 'production' ? 'none' : 'lax',
         maxAge: tokens.expires_in * 1000,
       });
 
@@ -70,15 +62,11 @@ export class AuthController {
 
       if (user?.identityStatus === IdentityStatus.VERIFIED) {
         this.logger.log(`User ID=${user.id} logged in the system.`);
-        // return res.json({ redirect: '${frontendRedirectUrl}/auth-success' }); //for testing
         return res.redirect(`${frontendRedirectUrl}/auth-success.html`);
       }
 
       this.logger.log(`User ID=${user!.id} should pass Stripe verification process.`);
-      // Optionally pre-create a VerificationSession here to warm up Stripe:
-      // await this.identityService.startIdentityVerification(user!.id);
-      // For a browser flow, redirect to a frontend page that will call /identity/start
-      // to securely obtain client_secret and open the Stripe modal.
+
       return res.redirect(`${frontendRedirectUrl}/verify.html`);
     } catch (error) {
       this.logger.log('Auth callback error:', error);
@@ -86,17 +74,23 @@ export class AuthController {
     }
   }
 
-  @Post('logout')
+  @Get('logout')
   @ApiOperation({ summary: 'Get logout URL for Auth0' })
   @ApiResponse({ status: 200, description: 'Returns Auth0 logout URL' })
   logout(@Res() res: Response) {
+    res.clearCookie('access_token', {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+      path: '/',
+    });
+
     const domain = this.configService.get<string>('AUTH0_DOMAIN');
     const clientId = this.configService.get<string>('AUTH0_CLIENT_ID');
     const returnTo = this.configService.get<string>('FRONTEND_URL');
 
-    const logoutUrl = `https://${domain}/v2/logout?client_id=${clientId}&returnTo=${encodeURIComponent(returnTo! + '/home.html')}`;
+    const logoutUrl = `https://${domain}/v2/logout?client_id=${clientId}&returnTo=${encodeURIComponent(returnTo!)}`;
 
-    return res.json({ logoutUrl });
-    // return res.redirect(logoutUrl);
+    return res.redirect(logoutUrl);
   }
 }

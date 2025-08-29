@@ -74,16 +74,10 @@ export class UsersService {
   }
 
   async update(id: string, user: UpdateUserDto): Promise<UserResponseDto> {
-    const entity = await this.usersRepository.preload({ id, ...user });
-    if (!entity) {
-      this.logger.error(`User not found: ${id}`);
-      throw new NotFoundException('User not found.');
-    }
-
+    this.logger.log(`Updating user: ${id}`);
     try {
-      const updatedUser = await this.usersRepository.save(entity);
-      this.logger.log(`User updated: ${id}`);
-      return plainToInstance(UserResponseDto, updatedUser, { excludeExtraneousValues: true });
+      await this.usersRepository.update(id, user);
+      return await this.findById(id);
     } catch (error) {
       const pgError = error as {
         code?: string;
@@ -99,8 +93,8 @@ export class UsersService {
         this.logger.error(`Unique constraint violated for field: ${field}`);
         throw new ConflictException(`Unique constraint violated for field: ${field}`);
       }
-      this.logger.error('Failed to create user');
-      throw new InternalServerErrorException('Failed to update user');
+      this.logger.error('Failed to update user');
+      throw error;
     }
   }
 

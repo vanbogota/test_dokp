@@ -1,22 +1,19 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import axios from 'axios';
-import { AuthService } from './auth.service';
 import { DecodedToken, JwkKey, JwksResponse } from '../common/interfaces/jwt.interfaces';
 import { UsersService } from '../entities/users/users.service';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor(
-    private readonly authService: AuthService,
-    private readonly userService: UsersService,
-  ) {
+  private readonly logger = new Logger(JwtStrategy.name);
+
+  constructor(private readonly userService: UsersService) {
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([
         ExtractJwt.fromAuthHeaderAsBearerToken(),
         (req: any) => {
-          console.log('JwtStrategy: ', req.cookies);
           return req?.cookies['access_token'];
         },
       ]),
@@ -44,19 +41,17 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       });
       jwks = response.data;
     } catch (error) {
-      console.error('Error fetching JWKS: ', error);
+      this.logger.error('Error fetching JWKS: ', error);
       throw new UnauthorizedException('Unable to fetch JWKS from Auth0');
     }
 
     const decodedToken = this.decodeToken(token);
     if (!decodedToken.header || typeof decodedToken.header.kid !== 'string') {
-      console.error('No kid found in token');
       throw new UnauthorizedException('No kid found in token');
     }
 
     const key = jwks.keys.find((k: JwkKey) => k.kid === decodedToken.header.kid);
     if (!key || !Array.isArray(key.x5c) || !key.x5c[0]) {
-      console.error('No matching key found');
       throw new UnauthorizedException('No matching key found');
     }
 

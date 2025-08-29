@@ -2,12 +2,9 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Stripe from 'stripe';
 import { IdentityStatus } from '../entities/users/user.entity';
-import {
-  IdentityStatusResponse,
-  IdentityVerificationData,
-  VerificationStatus,
-} from '../common/interfaces/identity.interfaces';
+import { VerificationStatus } from '../common/interfaces/identity.interfaces';
 import { UsersService } from '../entities/users/users.service';
+import { SessionsService } from '../entities/identity_sessions/sessions.service';
 
 @Injectable()
 export class IdentityService {
@@ -17,6 +14,7 @@ export class IdentityService {
   constructor(
     private readonly configService: ConfigService,
     private readonly userService: UsersService,
+    private readonly sessionService: SessionsService,
   ) {
     const stripeApiKey = this.configService.get<string>('STRIPE_API_KEY');
     if (!stripeApiKey) {
@@ -30,16 +28,34 @@ export class IdentityService {
    * @param userId The ID of the user to verify.
    * @returns The client secret for the verification session.
    */
-  async startIdentityVerification(userId: string): Promise<{ client_secret: string | null }> {
+  async startIdentityVerification(
+    userId: string,
+  ): Promise<{ session_status: string; client_secret: string | null }> {
     this.logger.log(`Started Identity verification for user: ${userId}`);
     try {
       const user = await this.userService.findById(userId);
-      if (!user) {
-        this.logger.error(`User not found: ${userId}`);
-        throw new NotFoundException(`User with ID ${userId} not found`);
+
+      let session: Stripe.Identity.VerificationSession | null = null;
+
+      const existingUserSession = await this.sessionService.findByUserId(user.id);
+      if (existingUserSession) {
+        session = await this.stripe.identity.verificationSessions.retrieve(
+          existingUserSession.sessionId,
+        );
       }
 
-      const session = await this.stripe.identity.verificationSessions.create({
+      if (session) {
+        switch (session.status) {
+          case 'requires_input':
+            return { session_status: 'requires_input', client_secret: session.client_secret };
+          case 'processing':
+            return { session_status: 'processing', client_secret: null };
+          case 'verified':
+            return { session_status: 'verified', client_secret: null };
+        }
+      }
+
+      session = await this.stripe.identity.verificationSessions.create({
         type: 'document',
         metadata: {
           user_id: userId,
@@ -53,7 +69,12 @@ export class IdentityService {
         },
       });
 
-      return { client_secret: session.client_secret };
+      await this.sessionService.create({
+        userId: user.id,
+        sessionId: session.id,
+      });
+
+      return { session_status: 'new', client_secret: session.client_secret };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       this.logger.error(`Failed to start identity verification: ${errorMessage}`);
@@ -66,38 +87,23 @@ export class IdentityService {
    * @param userId The ID of the user to check.
    * @returns The identity verification status.
    */
-  async getIdentityStatus(userId: string): Promise<IdentityStatusResponse> {
+  async getIdentityStatus(userId: string): Promise<{ status: string; error: any }> {
     try {
       const user = await this.userService.findById(userId);
-      if (!user) {
-        throw new NotFoundException(`User with ID ${userId} not found`);
+
+      const existingUserSession = await this.sessionService.findByUserId(user.id);
+
+      if (!existingUserSession) {
+        throw new NotFoundException('No identity verification session found for this user.');
       }
 
-      let verificationStatus: VerificationStatus;
-      switch (user.identityStatus) {
-        case IdentityStatus.PENDING:
-          verificationStatus = VerificationStatus.REQUIRES_INPUT;
-          break;
-        case IdentityStatus.VERIFIED:
-          verificationStatus = VerificationStatus.VERIFIED;
-          break;
-        case IdentityStatus.FAILED:
-          verificationStatus = VerificationStatus.FAILED;
-          break;
-        default:
-          verificationStatus = VerificationStatus.PROCESSING;
-      }
-
-      const identityData: IdentityVerificationData = {
-        firstName: user.firstName,
-        lastName: user.lastName,
-        country: user.country,
-        birthYear: user.birthYear,
-      };
+      const session = await this.stripe.identity.verificationSessions.retrieve(
+        existingUserSession.sessionId,
+      );
 
       return {
-        status: verificationStatus,
-        identityData,
+        status: session.status,
+        error: session.last_error,
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -121,10 +127,7 @@ export class IdentityService {
         return;
       }
 
-      if (
-        session.status !== VerificationStatus.VERIFIED &&
-        session.status !== VerificationStatus.FAILED
-      ) {
+      if (session.status !== 'verified' && session.status !== 'requires_input') {
         this.logger.log(`Ignoring session with status: ${session.status}`);
         return;
       }
@@ -135,7 +138,7 @@ export class IdentityService {
         return;
       }
 
-      if (session.status === VerificationStatus.VERIFIED) {
+      if (session.status === 'verified') {
         try {
           this.logger.log(
             `Handling verified status session: ${session.id} with report ID: ${session.last_verification_report}`,
@@ -167,7 +170,7 @@ export class IdentityService {
           user.identityStatus = IdentityStatus.FAILED;
         }
       }
-      if (session.status === VerificationStatus.FAILED) {
+      if (session.status === 'requires_input') {
         user.identityStatus = IdentityStatus.FAILED;
       }
 
@@ -176,6 +179,37 @@ export class IdentityService {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       this.logger.error(`Failed to process identity webhook: ${errorMessage}`);
+      throw error;
+    }
+  }
+
+  async getVerificationSession(sessionId: string): Promise<Stripe.Identity.VerificationSession> {
+    try {
+      const session = await this.stripe.identity.verificationSessions.retrieve(sessionId);
+      return session;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(`Failed to retrieve verification session: ${errorMessage}`);
+      throw error;
+    }
+  }
+
+  async getAllVerificationSessions(
+    client_reference_id?: string,
+    status?: VerificationStatus,
+    limit?: number,
+  ): Promise<Stripe.Identity.VerificationSession[]> {
+    try {
+      const sessions = await this.stripe.identity.verificationSessions.list({
+        client_reference_id: client_reference_id,
+        status: status,
+        limit: limit,
+      });
+
+      return sessions.data;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(`Failed to retrieve verification sessions: ${errorMessage}`);
       throw error;
     }
   }

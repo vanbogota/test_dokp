@@ -7,12 +7,14 @@ import { IdentityService } from './identity.service';
 import { IdentityController } from './identity.controller';
 import { WebhooksModule } from '../webhooks/webhooks.module';
 import { UsersModule } from '../entities/users/users.module';
+import { SessionsModule } from '../entities/identity_sessions/sessions.module';
 
 @Module({
   imports: [
     HttpModule,
     ConfigModule,
     UsersModule,
+    SessionsModule,
     TypeOrmModule.forFeature([User]),
     forwardRef(() => WebhooksModule),
   ],

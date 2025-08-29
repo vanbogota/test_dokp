@@ -11,10 +11,10 @@ export interface IdentityVerificationData {
 }
 
 export enum VerificationStatus {
-  REQUIRES_INPUT = 'requires_input',
+  CANCELED = 'canceled',
   PROCESSING = 'processing',
+  REQUIRES_INPUT = 'requires_input',
   VERIFIED = 'verified',
-  FAILED = 'failed',
 }
 
 export interface StripeIdentityWebhookPayload {

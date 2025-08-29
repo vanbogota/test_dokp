@@ -57,8 +57,7 @@ export class AuthService {
   getAuthorizationUrl(): string {
     const domain = this.configService.get<string>('AUTH0_DOMAIN');
     const clientId = this.configService.get<string>('AUTH0_CLIENT_ID');
-    const redirectUri =
-      this.configService.get<string>('AUTH0_CALLBACK_URL') || 'http://localhost:3000/auth/callback';
+    const redirectUri = this.configService.get<string>('AUTH0_CALLBACK_URL') || '';
     const audience = this.configService.get<string>('AUTH0_AUDIENCE') || '';
     const scope = 'openid profile email';
 
@@ -78,12 +77,10 @@ export class AuthService {
    * @returns The token response from Auth0.
    */
   async getUserTokensByCode(code: string): Promise<TokenResponse> {
-    console.log('Getting user tokens by code.');
     const domain = this.configService.get<string>('AUTH0_DOMAIN');
     const clientId = this.configService.get<string>('AUTH0_CLIENT_ID');
     const clientSecret = this.configService.get<string>('AUTH0_CLIENT_SECRET');
-    const redirectUri =
-      this.configService.get<string>('AUTH0_CALLBACK_URL') || 'http://localhost:3000/auth/callback';
+    const redirectUri = this.configService.get<string>('AUTH0_CALLBACK_URL') || '';
     const url = `https://${domain}/oauth/token`;
 
     try {
@@ -136,14 +133,12 @@ export class AuthService {
    * @param auth0User The Auth0 user profile.
    */
   async getOrCreateUserFromAuth0Profile(auth0User: Auth0UserProfile): Promise<User | null> {
-    console.log('Invoking user creation from Auth0 profile');
     try {
       const existingUser: User | null = await this.usersService.findByAuth0Sub(auth0User.sub);
       if (existingUser) {
         this.logger.log(`Existing user ID=${existingUser.id} logged in the system.`);
         return existingUser;
       }
-      console.log('Creating new user');
       const newUserDto = new CreateUserDto();
       newUserDto.auth0Sub = auth0User.sub;
       newUserDto.email = auth0User.email;
